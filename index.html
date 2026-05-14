@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galbina — Dashboard Financeiro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* === BASE === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #f4f2ec;
+  --bg2:      #ebe8df;
+  --card:     #ffffff;
+  --ink:      #1f2d2a;
+  --ink-soft: #4a5a55;
+  --petrol:   #1f4e5f;
+  --petrol2:  #2d7a8c;
+  --sand:     #e8a44d;
+  --sand2:    #f0b968;
+  --green:    #3a8a6d;
+  --amber:    #d99a2b;
+  --red:      #c0563f;
+  --line:     #ddd8cc;
+  --line2:    #e8e4d8;
+  --muted:    #8a8577;
+  --sidebar:  236px;
+  --header:   62px;
+  --shadow-sm: 0 1px 3px rgba(31,45,42,.06), 0 1px 2px rgba(31,45,42,.04);
+  --shadow-md: 0 4px 16px rgba(31,45,42,.08), 0 2px 6px rgba(31,45,42,.04);
+  --shadow-lg: 0 16px 48px rgba(31,45,42,.14);
+}
+body {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; border: 2px solid var(--bg2); }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* === LOADER === */
+#loader { position: fixed; inset: 0; z-index: 999; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+.spinner { width: 44px; height: 44px; border: 3px solid var(--line); border-top-color: var(--petrol); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text { color: var(--muted); font-size: 13px; letter-spacing: .04em; font-weight: 500; }
+.loader-brand { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 600; color: var(--petrol); letter-spacing: -.01em; }
+
+/* === ERROR === */
+#error-panel { display: none; position: fixed; inset: 0; z-index: 998; background: var(--bg); align-items: center; justify-content: center; padding: 20px; }
+.error-box { background: var(--card); border: 1px solid rgba(192,86,63,.25); border-radius: 18px; padding: 44px; max-width: 520px; text-align: center; box-shadow: var(--shadow-lg); }
+.error-icon { font-size: 42px; margin-bottom: 14px; }
+.error-title { font-size: 19px; font-weight: 700; color: var(--red); margin-bottom: 10px; font-family: 'Fraunces', serif; }
+.error-msg { color: var(--ink-soft); font-size: 13px; line-height: 1.75; white-space: pre-wrap; }
+.error-retry { margin-top: 22px; padding: 10px 26px; border-radius: 9px; border: none; background: var(--petrol); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: .02em; transition: background .15s; }
+.error-retry:hover { background: var(--petrol2); }
+
+/* === HEADER === */
+.header { position: fixed; top: 0; left: 0; right: 0; height: var(--header); background: rgba(255,255,255,.88); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 26px; gap: 18px; z-index: 100; }
+.header-mark { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg, var(--petrol), var(--petrol2)); display: flex; align-items: center; justify-content: center; color: #fff; font-family: 'Fraunces', serif; font-weight: 700; font-size: 19px; box-shadow: var(--shadow-sm); }
+.header-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
+.header-sub { font-size: 11px; color: var(--muted); margin-top: 1px; letter-spacing: .03em; font-weight: 500; }
+.header-divider { width: 1px; height: 24px; background: var(--line); }
+.header-status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--ink-soft); font-weight: 500; }
+.header-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(58,138,109,.15); }
+.btn-reload { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; display: flex; align-items: center; gap: 6px; }
+.btn-reload:hover { border-color: var(--petrol2); color: var(--petrol); }
+
+/* === SIDEBAR === */
+.sidebar { position: fixed; top: var(--header); left: 0; bottom: 0; width: var(--sidebar); background: var(--card); border-right: 1px solid var(--line); padding: 22px 14px; overflow-y: auto; z-index: 90; }
+.nav-section { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; padding: 0 12px; margin: 22px 0 8px; }
+.nav-section:first-child { margin-top: 4px; }
+.nav-item { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: var(--ink-soft); cursor: pointer; transition: all .14s; margin-bottom: 2px; }
+.nav-item:hover { background: var(--bg2); color: var(--ink); }
+.nav-item.active { background: linear-gradient(135deg, var(--petrol), var(--petrol2)); color: #fff; box-shadow: var(--shadow-sm); font-weight: 600; }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-foot { margin-top: 28px; padding: 14px 12px; border-top: 1px solid var(--line2); }
+.sidebar-foot-txt { font-size: 10.5px; color: var(--muted); line-height: 1.6; }
+
+/* === MAIN === */
+.main { margin-left: var(--sidebar); margin-top: var(--header); padding: 28px 34px 60px; max-width: 1500px; }
+
+/* === FILTER BAR === */
+.filter-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 13px; padding: 14px 18px; margin-bottom: 26px; box-shadow: var(--shadow-sm); }
+.filter-label { font-size: 11.5px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+.filter-bar select, .filter-bar input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; font-family: inherit; font-weight: 500; cursor: pointer; outline: none; transition: border-color .15s; }
+.filter-bar select:focus, .filter-bar input:focus { border-color: var(--petrol2); }
+.filter-sep { width: 1px; height: 26px; background: var(--line); }
+.btn { padding: 8px 18px; border-radius: 8px; border: none; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; letter-spacing: .01em; }
+.btn-primary { background: var(--petrol); color: #fff; }
+.btn-primary:hover { background: var(--petrol2); }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.btn-ghost:hover { color: var(--ink); border-color: var(--muted); }
+.toggle-group { display: flex; background: var(--bg2); border-radius: 9px; padding: 3px; gap: 2px; }
+.toggle-opt { padding: 7px 16px; border-radius: 7px; font-size: 12.5px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all .15s; border: none; background: transparent; font-family: inherit; }
+.toggle-opt.active { background: var(--card); color: var(--petrol); box-shadow: var(--shadow-sm); }
+
+/* === MODULE === */
+.module { display: none; animation: fadeUp .4s ease; }
+.module.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.mod-title { font-family: 'Fraunces', serif; font-size: 23px; font-weight: 600; color: var(--ink); letter-spacing: -.015em; }
+.mod-sub { font-size: 13px; color: var(--muted); margin-top: 3px; margin-bottom: 24px; font-weight: 400; }
+
+/* === CARDS / KPI === */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+.kpi-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: transform .15s, box-shadow .15s; }
+.kpi:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.kpi::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: var(--petrol2); }
+.kpi.accent-green::before { background: var(--green); }
+.kpi.accent-red::before { background: var(--red); }
+.kpi.accent-sand::before { background: var(--sand); }
+.kpi-label { font-size: 11.5px; font-weight: 600; color: var(--muted); letter-spacing: .03em; display: flex; align-items: center; gap: 6px; }
+.kpi-value { font-family: 'Fraunces', serif; font-size: 27px; font-weight: 600; color: var(--ink); margin-top: 8px; letter-spacing: -.02em; }
+.kpi-value.green { color: var(--green); }
+.kpi-value.red { color: var(--red); }
+.kpi-value.sand { color: var(--sand); }
+.kpi-value.petrol { color: var(--petrol); }
+.kpi-foot { font-size: 11.5px; color: var(--ink-soft); margin-top: 6px; font-weight: 500; }
+.kpi-foot.up { color: var(--green); }
+.kpi-foot.down { color: var(--red); }
+
+/* === GRIDS === */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-bottom: 18px; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-bottom: 18px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; box-shadow: var(--shadow-sm); }
+.panel-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; letter-spacing: -.01em; }
+.panel-sub { font-size: 11.5px; color: var(--muted); margin-bottom: 18px; font-weight: 400; }
+
+/* === TABLES === */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl thead th { text-align: left; padding: 10px 12px; font-size: 10.5px; font-weight: 700; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; border-bottom: 2px solid var(--line); }
+.tbl thead th.r, .tbl tbody td.r { text-align: right; }
+.tbl tbody td { padding: 11px 12px; border-bottom: 1px solid var(--line2); color: var(--ink-soft); font-weight: 500; }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr:hover { background: var(--bg); }
+.tbl tbody td.strong { color: var(--ink); font-weight: 600; }
+.tbl-total td { border-top: 2px solid var(--line); border-bottom: none !important; font-weight: 700; color: var(--ink); background: var(--bg2); }
+
+/* === BADGES === */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: .01em; }
+.badge-green { background: rgba(58,138,109,.12); color: var(--green); }
+.badge-amber { background: rgba(217,154,43,.14); color: var(--amber); }
+.badge-red { background: rgba(192,86,63,.12); color: var(--red); }
+.badge-petrol { background: rgba(45,122,140,.12); color: var(--petrol2); }
+.badge-muted { background: var(--bg2); color: var(--muted); }
+
+/* === STATUS PILL (saúde) === */
+.health-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 24px; font-size: 14px; font-weight: 700; font-family: 'Fraunces', serif; }
+.health-green { background: rgba(58,138,109,.13); color: var(--green); }
+.health-amber { background: rgba(217,154,43,.15); color: var(--amber); }
+.health-red { background: rgba(192,86,63,.13); color: var(--red); }
+
+/* === PROGRESS === */
+.bar-track { height: 8px; background: var(--bg2); border-radius: 5px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 5px; background: var(--petrol2); transition: width .5s ease; }
+.bar-fill.green { background: var(--green); }
+.bar-fill.sand { background: var(--sand); }
+.bar-fill.red { background: var(--red); }
+
+/* === CHARTS === */
+.chart-wrap { position: relative; height: 280px; }
+.chart-wrap.tall { height: 340px; }
+.chart-wrap.short { height: 220px; }
+
+/* === INSIGHTS === */
+.insight-list { display: flex; flex-direction: column; gap: 12px; }
+.insight { display: flex; gap: 12px; padding: 14px 16px; background: var(--bg); border-radius: 11px; border: 1px solid var(--line2); }
+.insight-icon { font-size: 18px; flex-shrink: 0; }
+.insight-txt { font-size: 12.5px; color: var(--ink-soft); line-height: 1.6; font-weight: 500; }
+.insight-txt strong { color: var(--ink); font-weight: 700; }
+.insight.warn { background: rgba(217,154,43,.06); border-color: rgba(217,154,43,.2); }
+.insight.danger { background: rgba(192,86,63,.05); border-color: rgba(192,86,63,.2); }
+.insight.good { background: rgba(58,138,109,.05); border-color: rgba(58,138,109,.2); }
+
+/* === MISC === */
+.empty { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 13px; }
+.spacer { height: 18px; }
+@media (max-width: 1100px) {
+  .kpi-grid { grid-template-columns: repeat(2,1fr); }
+  .grid-2, .grid-2-1, .grid-3 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-brand">Galbina</div>
+  <div class="spinner"></div>
+  <div class="loader-text">Carregando dados da planilha…</div>
+</div>
+
+<!-- ERROR PANEL -->
+<div id="error-panel">
+  <div class="error-box">
+    <div class="error-icon">⚠️</div>
+    <div class="error-title">Não foi possível carregar os dados</div>
+    <div class="error-msg" id="error-msg"></div>
+    <button class="error-retry" onclick="location.reload()">Tentar novamente</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-mark">G</div>
+  <div>
+    <div class="header-title">Dashboard Financeiro</div>
+    <div class="header-sub" id="header-cliente">GALBINA · INTELIGÊNCIA FINANCEIRA</div>
+  </div>
+  <div class="header-divider"></div>
+  <div class="header-status">
+    <div class="header-dot"></div>
+    <span id="header-updated">—</span>
+    <button class="btn-reload" id="btn-reload">↻ Atualizar</button>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="nav-section">Visão</div>
+  <div class="nav-item active" data-module="M1"><span class="nav-icon">◆</span> Visão Geral</div>
+  <div class="nav-section">Análise</div>
+  <div class="nav-item" data-module="M2"><span class="nav-icon">◇</span> Insights &amp; Análises</div>
+  <div class="nav-item" data-module="M3"><span class="nav-icon">◈</span> Lançamentos</div>
+  <div class="nav-item" data-module="M4"><span class="nav-icon">◉</span> Projetos</div>
+  <div class="sidebar-foot">
+    <div class="sidebar-foot-txt">
+      Dados sincronizados<br>com a planilha-mestre.<br>
+      <span style="color:var(--petrol2);font-weight:600">Atualização automática.</span>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <span class="filter-label">ANO</span>
+    <select id="filter-ano"></select>
+    <span class="filter-label">MÊS</span>
+    <select id="filter-mes">
+      <option value="">Ano todo</option>
+      <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+      <option value="3">Março</option><option value="4">Abril</option>
+      <option value="5">Maio</option><option value="6">Junho</option>
+      <option value="7">Julho</option><option value="8">Agosto</option>
+      <option value="9">Setembro</option><option value="10">Outubro</option>
+      <option value="11">Novembro</option><option value="12">Dezembro</option>
+    </select>
+    <div class="filter-sep"></div>
+    <span class="filter-count" id="filter-count" style="font-size:11.5px;color:var(--muted);font-weight:500"></span>
+  </div>
+
+  <!-- M1 — VISÃO GERAL -->
+  <div class="module active" id="M1">
+    <div class="mod-title">Visão Geral</div>
+    <div class="mod-sub">Indicadores consolidados do período selecionado</div>
+    <div id="m1-content"></div>
+  </div>
+
+  <!-- M2 — INSIGHTS & ANÁLISES -->
+  <div class="module" id="M2">
+    <div class="mod-title">Insights &amp; Análises</div>
+    <div class="mod-sub">Evolução, composição de despesas e leitura executiva</div>
+    <div id="m2-content"></div>
+  </div>
+
+  <!-- M3 — LANÇAMENTOS -->
+  <div class="module" id="M3">
+    <div class="mod-title">Lançamentos</div>
+    <div class="mod-sub">A receber, a pagar e situação de cada nota</div>
+    <div id="m3-content"></div>
+  </div>
+
+  <!-- M4 — PROJETOS -->
+  <div class="module" id="M4">
+    <div class="mod-title">Projetos</div>
+    <div class="mod-sub">Rentabilidade por projeto e por cliente</div>
+    <div id="m4-content"></div>
+  </div>
+
+</main>
+<script>
+/* ============================================================
+   GALBINA DASHBOARD — Motor de dados
+   ============================================================
+   COMO CONECTAR À SUA PLANILHA:
+   1. No Google Sheets: Arquivo → Compartilhar → Publicar na web
+   2. Publique CADA aba abaixo como CSV (escolha a aba + formato CSV)
+   3. Cole os links nos campos correspondentes abaixo
+   ============================================================ */
+const CSV = {
+  nfs:       'COLE_AQUI_O_LINK_CSV_DA_ABA_NFs_EMITIDAS',
+  despesas:  'COLE_AQUI_O_LINK_CSV_DA_ABA_CUSTOS_E_DESPESAS',
+  projetos:  'COLE_AQUI_O_LINK_CSV_DA_ABA_PROJETOS',
+  config:    'COLE_AQUI_O_LINK_CSV_DA_ABA_CONFIGURACOES'
+};
+
+/* Enquanto os links não forem colados, o dashboard usa dados de exemplo (fallback)
+   extraídos da planilha ZancaFilms v01 — assim você já vê tudo funcionando. */
+const USE_FALLBACK_IF_EMPTY = true;
+
+/* === UTILS DE PARSING === */
+function parseDateBR(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s || s === '-' || s === '—') return null;
+  // tenta DD/MM/AAAA
+  let p = s.split('/');
+  if (p.length === 3) {
+    const d = parseInt(p[0],10), m = parseInt(p[1],10)-1, y = parseInt(p[2],10);
+    if (!isNaN(d)&&!isNaN(m)&&!isNaN(y)) { const dt=new Date(y,m,d); return isNaN(dt)?null:dt; }
+  }
+  // tenta AAAA-MM-DD
+  p = s.split('-');
+  if (p.length === 3) {
+    const y = parseInt(p[0],10), m = parseInt(p[1],10)-1, d = parseInt(p[2],10);
+    if (!isNaN(d)&&!isNaN(m)&&!isNaN(y)) { const dt=new Date(y,m,d); return isNaN(dt)?null:dt; }
+  }
+  return null;
+}
+function parseNum(raw) {
+  if (raw===null||raw===undefined||raw==='') return 0;
+  let s = String(raw).trim();
+  if (!s || s==='-' || s==='—') return 0;
+  // remove R$, espaços, pontos de milhar; troca vírgula decimal por ponto
+  s = s.replace(/R\$/g,'').replace(/\s/g,'').replace(/\./g,'').replace(/,/g,'.');
+  // se tiver % remove
+  const isPct = s.includes('%');
+  s = s.replace(/%/g,'');
+  const n = parseFloat(s);
+  if (isNaN(n)) return 0;
+  return isPct ? n/100 : n;
+}
+function clean(v) {
+  if (v===null||v===undefined) return '';
+  const s = String(v).trim();
+  return (s==='-'||s==='—') ? '' : s;
+}
+function normH(h) {
+  return String(h).trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/\s+/g,' ');
+}
+function parseLine(line) {
+  const out=[]; let cur='', inQ=false;
+  for (let i=0;i<line.length;i++) {
+    const c=line[i];
+    if (c==='"') { if (inQ&&line[i+1]==='"'){cur+='"';i++;} else inQ=!inQ; }
+    else if (c===','&&!inQ) { out.push(cur); cur=''; }
+    else cur+=c;
+  }
+  out.push(cur);
+  return out;
+}
+/* parseCSV genérico → retorna array de objetos {colunaNormalizada: valor} */
+function parseCSV(text) {
+  if (!text) return [];
+  if (text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  const lines = text.split('\n').map(l=>l.replace(/\r$/,''));
+  if (lines.length<2) return [];
+  const hdrs = parseLine(lines[0]).map(normH);
+  const rows=[];
+  for (let i=1;i<lines.length;i++) {
+    if (!lines[i].trim()) continue;
+    const c = parseLine(lines[i]);
+    const obj = {};
+    hdrs.forEach((h,idx)=>{ obj[h] = clean(c[idx]||''); });
+    rows.push(obj);
+  }
+  return rows;
+}
+/* helper: pega valor de uma linha por nome de coluna (tolerante) */
+function col(row, ...names) {
+  for (const n of names) {
+    const k = normH(n);
+    if (row[k]!==undefined) return row[k];
+  }
+  return '';
+}
+
+/* === FORMATADORES === */
+function fmtBRL(v) {
+  if (!v && v!==0) return '—';
+  if (v===0) return 'R$ 0';
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+}
+function fmtBRLfull(v) {
+  if (!v && v!==0) return '—';
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+function fmtPct(v) {
+  if (v===null||v===undefined||isNaN(v)) return '—';
+  return (v*100).toFixed(1)+'%';
+}
+function fmtNum(v) {
+  if (!v && v!==0) return '—';
+  return v.toLocaleString('pt-BR');
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  return d.toLocaleDateString('pt-BR');
+}
+function monthName(m) {
+  return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m-1]||'';
+}
+
+/* === CHART HELPER === */
+const CHARTS = {};
+function killChart(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+function mkChart(id, cfg) {
+  killChart(id);
+  const el = document.getElementById(id);
+  if (!el) return;
+  CHARTS[id] = new Chart(el, cfg);
+}
+const CHART_FONT = "'Outfit', sans-serif";
+Chart.defaults.font.family = CHART_FONT;
+Chart.defaults.color = '#8a8577';
+/* ============================================================
+   DADOS DE FALLBACK — extraídos da planilha Galbina ZancaFilms v01
+   Usados enquanto os links CSV não são colados.
+   ============================================================ */
+const FALLBACK = {
+  config: {
+    cliente: 'ZancaFilms',
+    anoAtual: 2026,
+    aliquota: 0.14,
+    metaMargem: 0.30
+  },
+  nfs: [
+    // Nº, Cliente, Projeto, DataEmissao, DataVenc, DataReceb, ValorBruto
+    {numero:'1', cliente:'Drogasil', projeto:'', emissao:'10/01/2026', vencimento:'09/02/2026', recebimento:'05/02/2026', valorBruto:50000},
+    {numero:'2', cliente:'Serena', projeto:'Serena (Filme)', emissao:'15/01/2026', vencimento:'14/02/2026', recebimento:'10/02/2026', valorBruto:200000},
+    {numero:'3', cliente:'Serena', projeto:'Serena (Filme)', emissao:'20/01/2026', vencimento:'19/02/2026', recebimento:'18/02/2026', valorBruto:323525},
+    {numero:'4', cliente:'BBB', projeto:'Carreata BBB25', emissao:'05/02/2026', vencimento:'06/03/2026', recebimento:'04/03/2026', valorBruto:287000},
+    {numero:'5', cliente:'McDonalds', projeto:'McDonalds', emissao:'10/02/2026', vencimento:'12/03/2026', recebimento:'08/03/2026', valorBruto:73000},
+    {numero:'6', cliente:'Quinto Andar', projeto:'Quinto Andar', emissao:'15/02/2026', vencimento:'17/03/2026', recebimento:'15/03/2026', valorBruto:195000},
+    {numero:'7', cliente:'Quinto Andar', projeto:'Quinto Andar BH (50 ini)', emissao:'01/03/2026', vencimento:'31/03/2026', recebimento:'28/03/2026', valorBruto:278500},
+    {numero:'8', cliente:'Quinto Andar', projeto:'Quinto Andar BH (50 fin)', emissao:'10/03/2026', vencimento:'09/04/2026', recebimento:'05/04/2026', valorBruto:278500},
+    {numero:'9', cliente:'Quinto Andar', projeto:'Quinto Andar BH (Fotos)', emissao:'15/03/2026', vencimento:'14/04/2026', recebimento:'10/04/2026', valorBruto:3500},
+    {numero:'10', cliente:'Medley', projeto:'Medley', emissao:'20/03/2026', vencimento:'19/04/2026', recebimento:'', valorBruto:312950},
+    {numero:'11', cliente:'Magalu', projeto:'Magalu - Effie', emissao:'05/04/2026', vencimento:'05/05/2026', recebimento:'03/05/2026', valorBruto:59000},
+    {numero:'12', cliente:'Bradesco', projeto:'Bradesco Vinhetas', emissao:'15/04/2026', vencimento:'15/05/2026', recebimento:'', valorBruto:25000}
+  ],
+  despesas: [
+    // Data, Categoria, Subcategoria, Descricao, Valor, Status, CentroCusto, ProjetoVinc
+    {data:'05/01/2026', categoria:'Locação', sub:'Aluguel', descricao:'Aluguel sala 304', valor:2755, status:'Pago', centroCusto:'Administrativo', projeto:''},
+    {data:'05/01/2026', categoria:'Salários', sub:'Pró-labore', descricao:'Pró-labore Monica', valor:2300, status:'Pago', centroCusto:'Administrativo', projeto:''},
+    {data:'05/01/2026', categoria:'Salários', sub:'Salário CLT', descricao:'Salário Elisangela', valor:24000, status:'Pago', centroCusto:'Operacional', projeto:''},
+    {data:'10/01/2026', categoria:'Internet/Telefone', sub:'Vivo', descricao:'Conta Vivo', valor:134, status:'Pago', centroCusto:'Administrativo', projeto:''},
+    {data:'15/01/2026', categoria:'Locação', sub:'Luz', descricao:'Conta de luz', valor:192, status:'Pago', centroCusto:'Administrativo', projeto:''},
+    {data:'20/01/2026', categoria:'Serviços', sub:'Faxina', descricao:'Faxina mensal', valor:300, status:'Pago', centroCusto:'Administrativo', projeto:''},
+    {data:'08/01/2026', categoria:'Produção', sub:'Cachê', descricao:'Diretor Serena', valor:80000, status:'Pago', centroCusto:'Produção', projeto:'Serena (Filme)'},
+    {data:'12/01/2026', categoria:'Equipamentos', sub:'Locação Set', descricao:'Equipamento câmera', valor:50000, status:'Pago', centroCusto:'Produção', projeto:'Serena (Filme)'},
+    {data:'18/01/2026', categoria:'Produção', sub:'Cachê', descricao:'Equipe Serena', valor:172024, status:'Pago', centroCusto:'Produção', projeto:'Serena (Filme)'},
+    {data:'05/02/2026', categoria:'Locação', sub:'Aluguel', descricao:'Aluguel sala 304', valor:3282, status:'Pago', centroCusto:'Administrativo', projeto:''},
+    {data:'05/02/2026', categoria:'Salários', sub:'Pró-labore', descricao:'Pró-labore Monica', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:''},
+    {data:'05/02/2026', categoria:'Salários', sub:'Salário CLT', descricao:'Salário Elisangela', valor:15000, status:'Pago', centroCusto:'Operacional', projeto:''},
+    {data:'10/02/2026', categoria:'Produção', sub:'Cachê', descricao:'Equipe BBB', valor:130981, status:'Pago', centroCusto:'Produção', projeto:'Carreata BBB25'},
+    {data:'15/02/2026', categoria:'Produção', sub:'Cachê', descricao:'Equipe Quinto Andar', valor:91024, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
+    {data:'28/02/2026', categoria:'Salários', sub:'Comissão', descricao:'Comissão Elisangela BBB', valor:5370, status:'Pago', centroCusto:'Comercial', projeto:'Carreata BBB25'},
+    {data:'05/03/2026', categoria:'Locação', sub:'Aluguel', descricao:'Aluguel sala 304', valor:3280, status:'Pago', centroCusto:'Administrativo', projeto:''},
+    {data:'05/03/2026', categoria:'Salários', sub:'Pró-labore', descricao:'Pró-labore Monica', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:''},
+    {data:'05/03/2026', categoria:'Salários', sub:'Salário CLT', descricao:'Salário Elisangela', valor:12000, status:'Pago', centroCusto:'Operacional', projeto:''},
+    {data:'10/03/2026', categoria:'Produção', sub:'Cachê', descricao:'Equipe Quinto Andar BH', valor:272293, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar BH (50 ini)'},
+    {data:'20/03/2026', categoria:'Produção', sub:'Cachê', descricao:'Equipe Medley', valor:174075, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
+    {data:'05/04/2026', categoria:'Locação', sub:'Aluguel', descricao:'Aluguel sala 304', valor:3381, status:'A Pagar', centroCusto:'Administrativo', projeto:''},
+    {data:'05/04/2026', categoria:'Salários', sub:'Pró-labore', descricao:'Pró-labore Monica', valor:3600, status:'A Pagar', centroCusto:'Administrativo', projeto:''},
+    {data:'05/04/2026', categoria:'Salários', sub:'Salário CLT', descricao:'Salário Elisangela', valor:12000, status:'A Pagar', centroCusto:'Operacional', projeto:''}
+  ],
+  projetos: [
+    // Cliente, Nome, Tipo, ReceitaPrevista, Custo, Comissao(%), Status, DataInicio
+    {cliente:'Serena', nome:'Serena (Filme)', tipo:'Filme Publicitário', receita:523525, custo:302024, comissao:0, status:'✅ Pago', inicio:'05/01/2026'},
+    {cliente:'BBB', nome:'Carreata BBB25', tipo:'Filme Publicitário', receita:287000, custo:130981, comissao:0.05, status:'✅ Pago', inicio:'10/01/2026'},
+    {cliente:'McDonalds', nome:'McDonalds', tipo:'Vídeo Digital', receita:73000, custo:0, comissao:0, status:'✅ Pago', inicio:'15/01/2026'},
+    {cliente:'Quinto Andar', nome:'Quinto Andar', tipo:'Vídeo Digital', receita:195000, custo:91024, comissao:0.05, status:'✅ Pago', inicio:'01/02/2026'},
+    {cliente:'Quinto Andar', nome:'Quinto Andar BH (50 ini)', tipo:'Vídeo Digital', receita:278500, custo:136147, comissao:0.05, status:'✅ Pago', inicio:'10/02/2026'},
+    {cliente:'Quinto Andar', nome:'Quinto Andar BH (50 fin)', tipo:'Vídeo Digital', receita:278500, custo:136147, comissao:0.05, status:'✅ Pago', inicio:'15/02/2026'},
+    {cliente:'Quinto Andar', nome:'Quinto Andar BH (Fotos)', tipo:'Foto', receita:3500, custo:0, comissao:0, status:'✅ Pago', inicio:'20/02/2026'},
+    {cliente:'Medley', nome:'Medley', tipo:'Filme Publicitário', receita:312950, custo:174075, comissao:0.05, status:'✅ Pago', inicio:'01/03/2026'},
+    {cliente:'Netshoes', nome:'Netshoes', tipo:'Vídeo Digital', receita:380000, custo:178646, comissao:0.05, status:'🎬 Em Andamento', inicio:'01/04/2026'},
+    {cliente:'Magalu', nome:'Magalu - Monstro', tipo:'Vídeo Digital', receita:59000, custo:21000, comissao:0.05, status:'📤 Faturado', inicio:'15/03/2026'},
+    {cliente:'Magalu', nome:'Magalu - Effie', tipo:'Branded Content', receita:59000, custo:18660, comissao:0.05, status:'✅ Pago', inicio:'20/03/2026'},
+    {cliente:'Bradesco', nome:'Bradesco', tipo:'Filme Publicitário', receita:308800, custo:152825, comissao:0.05, status:'🎬 Em Andamento', inicio:'05/04/2026'},
+    {cliente:'Bradesco', nome:'Bradesco Vinhetas', tipo:'Vídeo Digital', receita:25000, custo:4200, comissao:0.05, status:'📦 Entregue', inicio:'10/04/2026'}
+  ]
+};
+
+/* === PARSERS ESPECÍFICOS POR ABA === */
+/* Transformam linhas CSV cruas no formato padrão usado pelo dashboard */
+
+function parseNFs(rows) {
+  return rows.map(r => ({
+    numero:      col(r,'nº nf','no nf','numero','n nf'),
+    cliente:     col(r,'cliente'),
+    projeto:     col(r,'projeto'),
+    emissao:     col(r,'data emissao','data emissão','emissao'),
+    vencimento:  col(r,'data vencimento','vencimento'),
+    recebimento: col(r,'data recebimento','recebimento'),
+    valorBruto:  parseNum(col(r,'valor bruto','valor'))
+  })).filter(n => n.cliente || n.valorBruto);
+}
+function parseDespesas(rows) {
+  return rows.map(r => ({
+    data:        col(r,'data'),
+    categoria:   col(r,'categoria'),
+    sub:         col(r,'subcategoria'),
+    descricao:   col(r,'descricao','descrição'),
+    valor:       parseNum(col(r,'valor')),
+    status:      col(r,'status'),
+    centroCusto: col(r,'centro de custo','centro custo'),
+    projeto:     col(r,'projeto vinculado','projeto')
+  })).filter(d => d.categoria || d.valor);
+}
+function parseProjetos(rows) {
+  return rows.map(r => ({
+    cliente:  col(r,'cliente'),
+    nome:     col(r,'nome do projeto','nome projeto','nome'),
+    tipo:     col(r,'tipo'),
+    receita:  parseNum(col(r,'receita prevista','receita')),
+    custo:    parseNum(col(r,'custo estimado','custo')),
+    comissao: parseNum(col(r,'% comissao','% comissão','comissao')),
+    status:   col(r,'status'),
+    inicio:   col(r,'data inicio','data início','inicio')
+  })).filter(p => p.cliente || p.nome);
+}
+
+/* === ESTADO GLOBAL === */
+let DATA = { config:{}, nfs:[], despesas:[], projetos:[] };
+let FILTRO = { ano: null, mes: '' };
+/* ============================================================
+   CAMADA DE CÁLCULO — filtros + agregações
+   ============================================================ */
+
+/* Aplica filtro de ano/mês a uma lista, usando o campo de data informado */
+function filtrarPorData(lista, campoData) {
+  return lista.filter(item => {
+    const d = parseDateBR(item[campoData]);
+    if (!d) return false;
+    if (FILTRO.ano && d.getFullYear() !== FILTRO.ano) return false;
+    if (FILTRO.mes && (d.getMonth()+1) !== parseInt(FILTRO.mes,10)) return false;
+    return true;
+  });
+}
+
+/* NF: status calculado dinamicamente (igual à planilha) */
+function statusNF(nf) {
+  const receb = parseDateBR(nf.recebimento);
+  const venc  = parseDateBR(nf.vencimento);
+  if (receb) return 'Paga';
+  if (venc && venc < new Date()) return 'Vencida';
+  if (venc && venc <= new Date(Date.now()+7*864e5)) return 'A Vencer';
+  return 'Emitida';
+}
+
+/* Calcula todos os KPIs do período filtrado */
+function calcularKPIs() {
+  const aliq = DATA.config.aliquota || 0.14;
+
+  // NFs emitidas no período (por data de emissão)
+  const nfsEmitidas = filtrarPorData(DATA.nfs, 'emissao');
+  const fatEmitido = nfsEmitidas.reduce((s,n)=>s+n.valorBruto,0);
+
+  // NFs pagas no período (por data de recebimento)
+  const nfsPagas = filtrarPorData(DATA.nfs, 'recebimento');
+  const fatPago = nfsPagas.reduce((s,n)=>s+n.valorBruto,0);
+
+  // Despesas pagas no período
+  const despNoPeriodo = filtrarPorData(DATA.despesas, 'data');
+  const despPagas = despNoPeriodo.filter(d=>d.status==='Pago');
+  const totalDespesas = despPagas.reduce((s,d)=>s+d.valor,0);
+  const despGerais = despPagas.filter(d=>!d.projeto).reduce((s,d)=>s+d.valor,0);
+  const custosDiretos = despPagas.filter(d=>d.projeto).reduce((s,d)=>s+d.valor,0);
+
+  // Lucro e margem
+  const lucro = fatPago - totalDespesas;
+  const margem = fatPago ? lucro/fatPago : 0;
+  const eficiencia = fatEmitido ? fatPago/fatEmitido : 0;
+
+  // Prazo médio de recebimento
+  let prazoSoma = 0, prazoQtd = 0;
+  nfsPagas.forEach(n=>{
+    const e = parseDateBR(n.emissao), r = parseDateBR(n.recebimento);
+    if (e && r) { prazoSoma += (r-e)/864e5; prazoQtd++; }
+  });
+  const prazoMedio = prazoQtd ? prazoSoma/prazoQtd : 0;
+
+  // A receber / a pagar (independente de filtro de mês — visão de fluxo futuro)
+  const hoje = new Date();
+  const fimMes = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0);
+  let aReceberMes=0, aReceberFuturo=0, vencido=0;
+  DATA.nfs.forEach(n=>{
+    const st = statusNF(n);
+    const venc = parseDateBR(n.vencimento);
+    if (st==='Vencida') vencido += n.valorBruto;
+    else if (st==='A Vencer' && venc) {
+      if (venc <= fimMes) aReceberMes += n.valorBruto;
+      else aReceberFuturo += n.valorBruto;
+    }
+  });
+  const aPagar = DATA.despesas.filter(d=>d.status==='A Pagar'||d.status==='Atrasado')
+                              .reduce((s,d)=>s+d.valor,0);
+
+  return {
+    fatEmitido, fatPago, totalDespesas, despGerais, custosDiretos,
+    lucro, margem, eficiencia, prazoMedio,
+    aReceberMes, aReceberFuturo, vencido, aPagar,
+    nfsCount: nfsEmitidas.length, despCount: despPagas.length
+  };
+}
+
+/* Agrega despesas por uma chave (centroCusto, categoria, etc.) */
+function agruparDespesas(campo) {
+  const despNoPeriodo = filtrarPorData(DATA.despesas, 'data');
+  const mapa = {};
+  despNoPeriodo.forEach(d=>{
+    const k = d[campo] || '(Sem classificação)';
+    if (!mapa[k]) mapa[k] = { pago:0, aPagar:0, total:0, qtd:0 };
+    if (d.status==='Pago') mapa[k].pago += d.valor;
+    else mapa[k].aPagar += d.valor;
+    mapa[k].total += d.valor;
+    mapa[k].qtd++;
+  });
+  return Object.entries(mapa)
+    .map(([nome,v])=>({nome,...v}))
+    .sort((a,b)=>b.total-a.total);
+}
+
+/* Calcula resultado por projeto */
+function calcularProjetos() {
+  const aliq = DATA.config.aliquota || 0.14;
+  return DATA.projetos.map(p=>{
+    const imposto = p.receita * aliq;
+    const receitaLiq = p.receita - imposto;
+    const comissaoVal = receitaLiq * (p.comissao||0);
+    const resultado = receitaLiq - p.custo - comissaoVal;
+    const margem = p.receita ? resultado/p.receita : 0;
+    return {...p, imposto, receitaLiq, comissaoVal, resultado, margem};
+  });
+}
+
+/* Agrega projetos por cliente */
+function agruparPorCliente() {
+  const projs = calcularProjetos();
+  const mapa = {};
+  projs.forEach(p=>{
+    if (!mapa[p.cliente]) mapa[p.cliente] = { qtd:0, receita:0, custo:0, resultado:0 };
+    mapa[p.cliente].qtd++;
+    mapa[p.cliente].receita += p.receita;
+    mapa[p.cliente].custo += p.custo;
+    mapa[p.cliente].resultado += p.resultado;
+  });
+  return Object.entries(mapa)
+    .map(([cliente,v])=>({cliente,...v,margem:v.receita?v.resultado/v.receita:0}))
+    .sort((a,b)=>b.receita-a.receita);
+}
+
+/* Evolução mensal do ano filtrado */
+function evolucaoMensal() {
+  const ano = FILTRO.ano;
+  const meses = [];
+  for (let m=1;m<=12;m++) {
+    const nfsEmit = DATA.nfs.filter(n=>{
+      const d=parseDateBR(n.emissao); return d && d.getFullYear()===ano && d.getMonth()+1===m;
+    });
+    const nfsPg = DATA.nfs.filter(n=>{
+      const d=parseDateBR(n.recebimento); return d && d.getFullYear()===ano && d.getMonth()+1===m;
+    });
+    const desp = DATA.despesas.filter(x=>{
+      const d=parseDateBR(x.data); return d && d.getFullYear()===ano && d.getMonth()+1===m && x.status==='Pago';
+    });
+    const emitido = nfsEmit.reduce((s,n)=>s+n.valorBruto,0);
+    const pago = nfsPg.reduce((s,n)=>s+n.valorBruto,0);
+    const despTotal = desp.reduce((s,d)=>s+d.valor,0);
+    meses.push({ mes:m, label:monthName(m), emitido, pago, despesas:despTotal, lucro:pago-despTotal });
+  }
+  return meses;
+}
+/* ============================================================
+   RENDERIZADORES — uma função por seção
+   ============================================================ */
+
+/* ---- M1: VISÃO GERAL ---- */
+function renderM1() {
+  const k = calcularKPIs();
+  const saude = k.margem>=0.15 ? 'green' : k.margem>=0.05 ? 'amber' : 'red';
+  const saudeLabel = k.margem>=0.15 ? '🟢 Saudável' : k.margem>=0.05 ? '🟡 Atenção' : '🔴 Crítico';
+
+  document.getElementById('m1-content').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div class="health-pill health-${saude}">${saudeLabel}</div>
+      <div style="font-size:12px;color:var(--muted);font-weight:500">
+        ${k.nfsCount} NFs · ${k.despCount} despesas no período
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi accent-sand">
+        <div class="kpi-label">💵 Faturamento Emitido</div>
+        <div class="kpi-value petrol">${fmtBRL(k.fatEmitido)}</div>
+        <div class="kpi-foot">Notas fiscais emitidas</div>
+      </div>
+      <div class="kpi accent-green">
+        <div class="kpi-label">💰 Faturamento Pago</div>
+        <div class="kpi-value green">${fmtBRL(k.fatPago)}</div>
+        <div class="kpi-foot">Eficiência: ${fmtPct(k.eficiencia)}</div>
+      </div>
+      <div class="kpi accent-red">
+        <div class="kpi-label">💸 Despesas Pagas</div>
+        <div class="kpi-value red">${fmtBRL(k.totalDespesas)}</div>
+        <div class="kpi-foot">Gerais ${fmtBRL(k.despGerais)} · Diretas ${fmtBRL(k.custosDiretos)}</div>
+      </div>
+      <div class="kpi ${k.lucro>=0?'accent-green':'accent-red'}">
+        <div class="kpi-label">✨ Lucro Líquido</div>
+        <div class="kpi-value ${k.lucro>=0?'green':'red'}">${fmtBRL(k.lucro)}</div>
+        <div class="kpi-foot ${k.lucro>=0?'up':'down'}">Margem: ${fmtPct(k.margem)}</div>
+      </div>
+    </div>
+
+    <div class="kpi-grid cols-3">
+      <div class="kpi">
+        <div class="kpi-label">📊 Margem Líquida</div>
+        <div class="kpi-value">${fmtPct(k.margem)}</div>
+        <div class="kpi-foot">Meta: ${fmtPct(DATA.config.metaMargem||0.30)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">⚡ Índice de Eficiência</div>
+        <div class="kpi-value">${fmtPct(k.eficiencia)}</div>
+        <div class="kpi-foot">Pago ÷ Emitido</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">⏱️ Prazo Médio Receb.</div>
+        <div class="kpi-value">${Math.round(k.prazoMedio)} dias</div>
+        <div class="kpi-foot">Da emissão ao recebimento</div>
+      </div>
+    </div>
+
+    <div class="grid-2-1">
+      <div class="panel">
+        <div class="panel-title">Fluxo de Caixa Projetado</div>
+        <div class="panel-sub">Posição de recebimentos e pagamentos futuros</div>
+        <table class="tbl">
+          <tbody>
+            <tr><td class="strong">🟡 A Receber no Mês</td><td class="r strong">${fmtBRL(k.aReceberMes)}</td></tr>
+            <tr><td>📅 A Receber Próximos Meses</td><td class="r">${fmtBRL(k.aReceberFuturo)}</td></tr>
+            <tr><td>🔴 NFs Vencidas <span class="badge badge-red">alerta</span></td><td class="r" style="color:var(--red);font-weight:700">${fmtBRL(k.vencido)}</td></tr>
+            <tr><td>📤 Despesas a Pagar</td><td class="r">${fmtBRL(k.aPagar)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Composição de Despesas</div>
+        <div class="panel-sub">Estrutura vs. produção</div>
+        <div class="chart-wrap short"><canvas id="m1-donut"></canvas></div>
+      </div>
+    </div>
+  `;
+
+  // Donut: despesas gerais vs custos diretos
+  mkChart('m1-donut', {
+    type: 'doughnut',
+    data: {
+      labels: ['Despesa Geral (Estrutura)', 'Custo Direto (Projetos)'],
+      datasets: [{
+        data: [k.despGerais, k.custosDiretos],
+        backgroundColor: ['#2d7a8c','#e8a44d'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{ position:'bottom', labels:{ padding:14, font:{size:11}, usePointStyle:true } } }
+    }
+  });
+}
+
+/* ---- M2: INSIGHTS & ANÁLISES ---- */
+function renderM2() {
+  const k = calcularKPIs();
+  const evol = evolucaoMensal();
+  const porCC = agruparDespesas('centroCusto');
+  const porCat = agruparDespesas('categoria');
+  const projs = calcularProjetos();
+  const porCliente = agruparPorCliente();
+
+  // Insights automáticos
+  const insights = [];
+  if (porCliente.length) {
+    const top = porCliente[0];
+    insights.push({tipo:'good', icon:'🏆', txt:`Cliente mais relevante: <strong>${top.cliente}</strong> — ${fmtBRL(top.receita)} em receita (${top.qtd} projeto${top.qtd>1?'s':''}, margem ${fmtPct(top.margem)}).`});
+    if (porCliente.length>1) {
+      const conc = top.receita / porCliente.reduce((s,c)=>s+c.receita,0);
+      if (conc > 0.4) insights.push({tipo:'warn', icon:'⚠️', txt:`Concentração de receita: <strong>${fmtPct(conc)}</strong> vem de um único cliente. Risco de dependência — vale diversificar a carteira.`});
+    }
+  }
+  if (k.margem < (DATA.config.metaMargem||0.30)) {
+    insights.push({tipo:'warn', icon:'📉', txt:`Margem atual de <strong>${fmtPct(k.margem)}</strong> está abaixo da meta de ${fmtPct(DATA.config.metaMargem||0.30)}. Avaliar custos de produção ou precificação.`});
+  } else {
+    insights.push({tipo:'good', icon:'📈', txt:`Margem de <strong>${fmtPct(k.margem)}</strong> está acima da meta. Operação saudável.`});
+  }
+  if (k.vencido > 0) {
+    insights.push({tipo:'danger', icon:'🔴', txt:`Há <strong>${fmtBRL(k.vencido)}</strong> em notas fiscais vencidas e não recebidas. Priorizar cobrança.`});
+  }
+  if (porCC.length) {
+    const prod = porCC.find(c=>c.nome==='Produção');
+    if (prod) {
+      const pctProd = prod.total / porCC.reduce((s,c)=>s+c.total,0);
+      insights.push({tipo:'good', icon:'🎬', txt:`<strong>${fmtPct(pctProd)}</strong> das despesas vão direto para produção — estrutura administrativa enxuta.`});
+    }
+  }
+
+  document.getElementById('m2-content').innerHTML = `
+    <div class="panel" style="margin-bottom:18px">
+      <div class="panel-title">Evolução Mensal — ${FILTRO.ano}</div>
+      <div class="panel-sub">Faturamento emitido, pago e lucro líquido mês a mês</div>
+      <div class="chart-wrap tall"><canvas id="m2-evol"></canvas></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Despesas por Centro de Custo</div>
+        <div class="panel-sub">Para onde o dinheiro está indo</div>
+        <div class="chart-wrap"><canvas id="m2-cc"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Despesas por Categoria</div>
+        <div class="panel-sub">Top categorias do período</div>
+        <div class="chart-wrap"><canvas id="m2-cat"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Leitura Executiva</div>
+      <div class="panel-sub">Insights automáticos do período</div>
+      <div class="insight-list">
+        ${insights.map(i=>`
+          <div class="insight ${i.tipo}">
+            <div class="insight-icon">${i.icon}</div>
+            <div class="insight-txt">${i.txt}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  `;
+
+  // Gráfico evolução
+  mkChart('m2-evol', {
+    type:'bar',
+    data:{
+      labels: evol.map(e=>e.label),
+      datasets:[
+        {label:'Fat. Emitido', data:evol.map(e=>e.emitido), backgroundColor:'#2d7a8c', borderRadius:4, order:2},
+        {label:'Fat. Pago', data:evol.map(e=>e.pago), backgroundColor:'#3a8a6d', borderRadius:4, order:2},
+        {type:'line', label:'Lucro Líquido', data:evol.map(e=>e.lucro), borderColor:'#e8a44d', backgroundColor:'#e8a44d', borderWidth:2.5, tension:.35, pointRadius:3, order:1}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{padding:14,font:{size:11},usePointStyle:true} } },
+      scales:{ y:{ ticks:{ callback:v=>'R$ '+(v/1000)+'k' }, grid:{color:'#e8e4d8'} }, x:{ grid:{display:false} } }
+    }
+  });
+
+  // Centro de custo
+  mkChart('m2-cc', {
+    type:'doughnut',
+    data:{
+      labels: porCC.map(c=>c.nome),
+      datasets:[{ data:porCC.map(c=>c.total), backgroundColor:['#1f4e5f','#2d7a8c','#e8a44d','#3a8a6d','#c0563f','#d99a2b'], borderWidth:0 }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'58%',
+      plugins:{ legend:{position:'bottom',labels:{padding:12,font:{size:10.5},usePointStyle:true}} } }
+  });
+
+  // Categoria (barra horizontal)
+  const topCat = porCat.slice(0,7);
+  mkChart('m2-cat', {
+    type:'bar',
+    data:{
+      labels: topCat.map(c=>c.nome),
+      datasets:[{ data:topCat.map(c=>c.total), backgroundColor:'#2d7a8c', borderRadius:4 }]
+    },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ x:{ ticks:{callback:v=>'R$ '+(v/1000)+'k'}, grid:{color:'#e8e4d8'} }, y:{grid:{display:false}} } }
+  });
+}
+/* ---- M3: LANÇAMENTOS ---- */
+function renderM3() {
+  const k = calcularKPIs();
+
+  // NFs com status calculado, ordenadas
+  const nfsComStatus = DATA.nfs.map(n=>({...n, st:statusNF(n), vencDate:parseDateBR(n.vencimento)}))
+    .sort((a,b)=>(a.vencDate||0)-(b.vencDate||0));
+  const vencidas = nfsComStatus.filter(n=>n.st==='Vencida');
+  const aVencer = nfsComStatus.filter(n=>n.st==='A Vencer'||n.st==='Emitida');
+
+  // Despesas a pagar
+  const aPagar = DATA.despesas.filter(d=>d.status==='A Pagar'||d.status==='Atrasado')
+    .sort((a,b)=>(parseDateBR(a.data)||0)-(parseDateBR(b.data)||0));
+
+  // Contagem status NFs
+  const stCount = { Paga:0, 'A Vencer':0, Vencida:0, Emitida:0 };
+  nfsComStatus.forEach(n=>stCount[n.st]++);
+
+  function badgeSt(st) {
+    const map = {'Paga':'badge-green','A Vencer':'badge-amber','Vencida':'badge-red','Emitida':'badge-petrol'};
+    const ico = {'Paga':'✅','A Vencer':'🟡','Vencida':'🔴','Emitida':'🟢'};
+    return `<span class="badge ${map[st]}">${ico[st]} ${st}</span>`;
+  }
+
+  document.getElementById('m3-content').innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi accent-green">
+        <div class="kpi-label">🟡 A Receber no Mês</div>
+        <div class="kpi-value green">${fmtBRL(k.aReceberMes)}</div>
+        <div class="kpi-foot">NFs com vencimento neste mês</div>
+      </div>
+      <div class="kpi accent-sand">
+        <div class="kpi-label">📅 A Receber — Futuro</div>
+        <div class="kpi-value sand">${fmtBRL(k.aReceberFuturo)}</div>
+        <div class="kpi-foot">Próximos meses</div>
+      </div>
+      <div class="kpi accent-red">
+        <div class="kpi-label">🔴 NFs Vencidas</div>
+        <div class="kpi-value red">${fmtBRL(k.vencido)}</div>
+        <div class="kpi-foot">${vencidas.length} nota${vencidas.length!==1?'s':''} em atraso</div>
+      </div>
+      <div class="kpi accent-red">
+        <div class="kpi-label">📤 Despesas a Pagar</div>
+        <div class="kpi-value red">${fmtBRL(k.aPagar)}</div>
+        <div class="kpi-foot">${aPagar.length} lançamento${aPagar.length!==1?'s':''} pendente${aPagar.length!==1?'s':''}</div>
+      </div>
+    </div>
+
+    ${vencidas.length ? `
+    <div class="panel" style="margin-bottom:18px;border-color:rgba(192,86,63,.3)">
+      <div class="panel-title" style="color:var(--red)">⚠️ Notas Fiscais Vencidas — Ação Necessária</div>
+      <div class="panel-sub">Cobrança prioritária</div>
+      <table class="tbl">
+        <thead><tr><th>NF</th><th>Cliente</th><th>Projeto</th><th>Vencimento</th><th class="r">Valor</th></tr></thead>
+        <tbody>
+          ${vencidas.map(n=>`
+            <tr>
+              <td class="strong">#${n.numero}</td>
+              <td>${n.cliente}</td>
+              <td style="color:var(--muted)">${n.projeto||'—'}</td>
+              <td style="color:var(--red);font-weight:600">${fmtDate(n.vencDate)}</td>
+              <td class="r strong">${fmtBRL(n.valorBruto)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : ''}
+
+    <div class="grid-2-1">
+      <div class="panel">
+        <div class="panel-title">A Receber — Próximas Notas</div>
+        <div class="panel-sub">Notas emitidas aguardando recebimento</div>
+        <table class="tbl">
+          <thead><tr><th>NF</th><th>Cliente</th><th>Vencimento</th><th></th><th class="r">Valor</th></tr></thead>
+          <tbody>
+            ${aVencer.length ? aVencer.slice(0,12).map(n=>`
+              <tr>
+                <td class="strong">#${n.numero}</td>
+                <td>${n.cliente}</td>
+                <td>${fmtDate(n.vencDate)}</td>
+                <td>${badgeSt(n.st)}</td>
+                <td class="r strong">${fmtBRL(n.valorBruto)}</td>
+              </tr>`).join('') : '<tr><td colspan="5" class="empty">Nenhuma nota a vencer</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Status das NFs</div>
+        <div class="panel-sub">Distribuição geral</div>
+        <div class="chart-wrap short"><canvas id="m3-status"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Despesas a Pagar</div>
+      <div class="panel-sub">Compromissos financeiros pendentes</div>
+      <table class="tbl">
+        <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Centro de Custo</th><th class="r">Valor</th></tr></thead>
+        <tbody>
+          ${aPagar.length ? aPagar.map(d=>`
+            <tr>
+              <td>${d.data}</td>
+              <td><span class="badge badge-muted">${d.categoria}</span></td>
+              <td class="strong">${d.descricao}</td>
+              <td style="color:var(--muted)">${d.centroCusto||'—'}</td>
+              <td class="r strong">${fmtBRL(d.valor)}</td>
+            </tr>`).join('') : '<tr><td colspan="5" class="empty">Nenhuma despesa pendente</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  mkChart('m3-status', {
+    type:'doughnut',
+    data:{
+      labels:['✅ Pagas','🟡 A Vencer','🔴 Vencidas','🟢 Emitidas'],
+      datasets:[{ data:[stCount.Paga,stCount['A Vencer'],stCount.Vencida,stCount.Emitida],
+        backgroundColor:['#3a8a6d','#d99a2b','#c0563f','#2d7a8c'], borderWidth:0 }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+      plugins:{ legend:{position:'bottom',labels:{padding:12,font:{size:10.5},usePointStyle:true}} } }
+  });
+}
+
+/* ---- M4: PROJETOS ---- */
+function renderM4() {
+  const projs = calcularProjetos();
+  const porCliente = agruparPorCliente();
+
+  // Status agregados
+  const emAndamento = projs.filter(p=>p.status&&p.status.includes('Andamento'));
+  const aFaturar = emAndamento.reduce((s,p)=>s+p.receita,0);
+  const pagos = projs.filter(p=>p.status&&p.status.includes('Pago'));
+  const margemMedia = pagos.length ? pagos.reduce((s,p)=>s+p.margem,0)/pagos.length : 0;
+  const maisLucrativo = [...projs].sort((a,b)=>b.resultado-a.resultado)[0];
+
+  // Ordenar projetos por resultado
+  const projsOrd = [...projs].sort((a,b)=>b.resultado-a.resultado);
+
+  function badgeStatusProj(st) {
+    if (!st) return '<span class="badge badge-muted">—</span>';
+    if (st.includes('Pago')) return '<span class="badge badge-green">✅ Pago</span>';
+    if (st.includes('Andamento')) return '<span class="badge badge-amber">🎬 Em Andamento</span>';
+    if (st.includes('Faturado')) return '<span class="badge badge-petrol">📤 Faturado</span>';
+    if (st.includes('Entregue')) return '<span class="badge badge-petrol">📦 Entregue</span>';
+    return `<span class="badge badge-muted">${st}</span>`;
+  }
+
+  document.getElementById('m4-content').innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi accent-sand">
+        <div class="kpi-label">🎬 Projetos em Andamento</div>
+        <div class="kpi-value sand">${emAndamento.length}</div>
+        <div class="kpi-foot">De ${projs.length} cadastrados</div>
+      </div>
+      <div class="kpi accent-sand">
+        <div class="kpi-label">📝 Total a Faturar</div>
+        <div class="kpi-value petrol">${fmtBRL(aFaturar)}</div>
+        <div class="kpi-foot">Projetos em andamento</div>
+      </div>
+      <div class="kpi accent-green">
+        <div class="kpi-label">📈 Margem Média</div>
+        <div class="kpi-value green">${fmtPct(margemMedia)}</div>
+        <div class="kpi-foot">Projetos já pagos</div>
+      </div>
+      <div class="kpi accent-green">
+        <div class="kpi-label">🏆 Mais Lucrativo</div>
+        <div class="kpi-value" style="font-size:18px">${maisLucrativo?maisLucrativo.nome:'—'}</div>
+        <div class="kpi-foot up">${maisLucrativo?fmtBRL(maisLucrativo.resultado)+' · '+fmtPct(maisLucrativo.margem):''}</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Receita por Cliente</div>
+        <div class="panel-sub">Quem mais gera receita</div>
+        <div class="chart-wrap"><canvas id="m4-cliente"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Margem por Projeto</div>
+        <div class="panel-sub">Rentabilidade de cada entrega</div>
+        <div class="chart-wrap"><canvas id="m4-margem"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:18px">
+      <div class="panel-title">Análise Completa por Cliente</div>
+      <div class="panel-sub">Receita, custo e resultado consolidados</div>
+      <table class="tbl">
+        <thead><tr><th>Cliente</th><th class="r">Projetos</th><th class="r">Receita</th><th class="r">Custos</th><th class="r">Resultado</th><th class="r">Margem</th></tr></thead>
+        <tbody>
+          ${porCliente.map(c=>`
+            <tr>
+              <td class="strong">${c.cliente}</td>
+              <td class="r">${c.qtd}</td>
+              <td class="r">${fmtBRL(c.receita)}</td>
+              <td class="r" style="color:var(--red)">${fmtBRL(c.custo)}</td>
+              <td class="r strong" style="color:var(--green)">${fmtBRL(c.resultado)}</td>
+              <td class="r"><span class="badge ${c.margem>=0.3?'badge-green':c.margem>=0.15?'badge-amber':'badge-red'}">${fmtPct(c.margem)}</span></td>
+            </tr>`).join('')}
+          <tr class="tbl-total">
+            <td>TOTAL</td>
+            <td class="r">${porCliente.reduce((s,c)=>s+c.qtd,0)}</td>
+            <td class="r">${fmtBRL(porCliente.reduce((s,c)=>s+c.receita,0))}</td>
+            <td class="r">${fmtBRL(porCliente.reduce((s,c)=>s+c.custo,0))}</td>
+            <td class="r">${fmtBRL(porCliente.reduce((s,c)=>s+c.resultado,0))}</td>
+            <td class="r">${fmtPct(porCliente.reduce((s,c)=>s+c.resultado,0)/porCliente.reduce((s,c)=>s+c.receita,0))}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Todos os Projetos</div>
+      <div class="panel-sub">Detalhamento por projeto — ordenado por resultado</div>
+      <table class="tbl">
+        <thead><tr><th>Projeto</th><th>Cliente</th><th>Status</th><th class="r">Receita</th><th class="r">Custo</th><th class="r">Resultado</th><th class="r">Margem</th></tr></thead>
+        <tbody>
+          ${projsOrd.map(p=>`
+            <tr>
+              <td class="strong">${p.nome}</td>
+              <td>${p.cliente}</td>
+              <td>${badgeStatusProj(p.status)}</td>
+              <td class="r">${fmtBRL(p.receita)}</td>
+              <td class="r" style="color:var(--red)">${fmtBRL(p.custo)}</td>
+              <td class="r strong">${fmtBRL(p.resultado)}</td>
+              <td class="r"><span class="badge ${p.margem>=0.3?'badge-green':p.margem>=0.15?'badge-amber':'badge-red'}">${fmtPct(p.margem)}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // Receita por cliente
+  mkChart('m4-cliente', {
+    type:'bar',
+    data:{
+      labels: porCliente.map(c=>c.cliente),
+      datasets:[
+        {label:'Receita', data:porCliente.map(c=>c.receita), backgroundColor:'#2d7a8c', borderRadius:4},
+        {label:'Resultado', data:porCliente.map(c=>c.resultado), backgroundColor:'#e8a44d', borderRadius:4}
+      ]
+    },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom',labels:{padding:12,font:{size:11},usePointStyle:true}} },
+      scales:{ x:{ ticks:{callback:v=>'R$ '+(v/1000)+'k'}, grid:{color:'#e8e4d8'} }, y:{grid:{display:false}} } }
+  });
+
+  // Margem por projeto
+  const projMargem = [...projs].filter(p=>p.receita>0).sort((a,b)=>b.margem-a.margem);
+  mkChart('m4-margem', {
+    type:'bar',
+    data:{
+      labels: projMargem.map(p=>p.nome),
+      datasets:[{ data:projMargem.map(p=>p.margem*100),
+        backgroundColor:projMargem.map(p=>p.margem>=0.3?'#3a8a6d':p.margem>=0.15?'#d99a2b':'#c0563f'),
+        borderRadius:4 }]
+    },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.x.toFixed(1)+'%'}} },
+      scales:{ x:{ ticks:{callback:v=>v+'%'}, grid:{color:'#e8e4d8'} }, y:{grid:{display:false}} } }
+  });
+}
+/* ============================================================
+   NAVEGAÇÃO + FILTROS + INIT
+   ============================================================ */
+
+function showModule(id) {
+  document.querySelectorAll('.module').forEach(m=>m.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelector(`.nav-item[data-module="${id}"]`).classList.add('active');
+  renderAtual(id);
+}
+
+function renderAtual(id) {
+  const fn = { M1:renderM1, M2:renderM2, M3:renderM3, M4:renderM4 }[id];
+  if (fn) fn();
+}
+
+function moduloAtivo() {
+  const el = document.querySelector('.module.active');
+  return el ? el.id : 'M1';
+}
+
+function aplicarFiltro() {
+  FILTRO.ano = parseInt(document.getElementById('filter-ano').value,10);
+  FILTRO.mes = document.getElementById('filter-mes').value;
+  // Atualiza contador
+  const txt = FILTRO.mes
+    ? `${monthName(parseInt(FILTRO.mes,10))} / ${FILTRO.ano}`
+    : `Ano ${FILTRO.ano} completo`;
+  document.getElementById('filter-count').textContent = '📅 ' + txt;
+  renderAtual(moduloAtivo());
+}
+
+/* Popula o seletor de ano com os anos presentes nos dados */
+function popularAnos() {
+  const anos = new Set();
+  DATA.nfs.forEach(n=>{ const d=parseDateBR(n.emissao); if(d) anos.add(d.getFullYear()); });
+  DATA.despesas.forEach(x=>{ const d=parseDateBR(x.data); if(d) anos.add(d.getFullYear()); });
+  DATA.projetos.forEach(p=>{ const d=parseDateBR(p.inicio); if(d) anos.add(d.getFullYear()); });
+  if (DATA.config.anoAtual) anos.add(DATA.config.anoAtual);
+  if (!anos.size) anos.add(new Date().getFullYear());
+
+  const lista = [...anos].sort((a,b)=>b-a);
+  const sel = document.getElementById('filter-ano');
+  sel.innerHTML = lista.map(a=>`<option value="${a}">${a}</option>`).join('');
+  // default: ano da config, ou o mais recente
+  FILTRO.ano = DATA.config.anoAtual && lista.includes(DATA.config.anoAtual)
+    ? DATA.config.anoAtual : lista[0];
+  sel.value = FILTRO.ano;
+}
+
+/* ============================================================
+   CARREGAMENTO DE DADOS
+   ============================================================ */
+
+async function fetchCSV(url) {
+  if (!url || url.startsWith('COLE_AQUI')) return null;
+  try {
+    const res = await fetch(url + (url.includes('?')?'&':'?') + 't=' + Date.now(), { cache:'no-store' });
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    return await res.text();
+  } catch(e) {
+    console.warn('Falha ao buscar CSV:', url, e);
+    return null;
+  }
+}
+
+function parseConfig(rows) {
+  // A aba Configurações tem formato campo|valor — busca por rótulos conhecidos
+  const cfg = { cliente:'Cliente', anoAtual:new Date().getFullYear(), aliquota:0.14, metaMargem:0.30 };
+  rows.forEach(r=>{
+    const vals = Object.values(r);
+    for (let i=0;i<vals.length-1;i++) {
+      const label = normH(vals[i]||'');
+      const val = vals[i+1];
+      if (label.includes('nome do cliente')) cfg.cliente = clean(val) || cfg.cliente;
+      if (label.includes('ano fiscal')) { const n=parseInt(val,10); if(!isNaN(n)) cfg.anoAtual=n; }
+      if (label.includes('aliquota de imposto')) { const n=parseNum(val); if(n) cfg.aliquota=n; }
+      if (label.includes('meta de margem')) { const n=parseNum(val); if(n) cfg.metaMargem=n; }
+    }
+  });
+  return cfg;
+}
+
+async function carregarDados() {
+  let usouFallback = false;
+
+  // Config
+  const cfgTxt = await fetchCSV(CSV.config);
+  DATA.config = cfgTxt ? parseConfig(parseCSV(cfgTxt)) : (usouFallback=true, {...FALLBACK.config});
+
+  // NFs
+  const nfsTxt = await fetchCSV(CSV.nfs);
+  DATA.nfs = nfsTxt ? parseNFs(parseCSV(nfsTxt)) : (usouFallback=true, [...FALLBACK.nfs]);
+  if (nfsTxt && !DATA.nfs.length) DATA.nfs = [...FALLBACK.nfs];
+
+  // Despesas
+  const despTxt = await fetchCSV(CSV.despesas);
+  DATA.despesas = despTxt ? parseDespesas(parseCSV(despTxt)) : (usouFallback=true, [...FALLBACK.despesas]);
+  if (despTxt && !DATA.despesas.length) DATA.despesas = [...FALLBACK.despesas];
+
+  // Projetos
+  const projTxt = await fetchCSV(CSV.projetos);
+  DATA.projetos = projTxt ? parseProjetos(parseCSV(projTxt)) : (usouFallback=true, [...FALLBACK.projetos]);
+  if (projTxt && !DATA.projetos.length) DATA.projetos = [...FALLBACK.projetos];
+
+  return usouFallback;
+}
+
+async function init() {
+  try {
+    const usouFallback = await carregarDados();
+
+    // Cabeçalho
+    document.getElementById('header-cliente').textContent =
+      (DATA.config.cliente || 'Cliente').toUpperCase() + ' · GALBINA';
+    const agora = new Date();
+    document.getElementById('header-updated').textContent =
+      (usouFallback ? 'Dados de exemplo' : 'Atualizado') + ' · ' +
+      agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+    popularAnos();
+    aplicarFiltro();
+
+    // Esconde loader
+    document.getElementById('loader').style.display = 'none';
+
+    // Aviso discreto se está em fallback
+    if (usouFallback) {
+      const hs = document.getElementById('header-updated');
+      hs.style.color = 'var(--amber)';
+      hs.title = 'Os links CSV ainda não foram configurados. Mostrando dados de exemplo da planilha ZancaFilms.';
+    }
+  } catch(e) {
+    console.error(e);
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('error-panel').style.display = 'flex';
+    document.getElementById('error-msg').textContent =
+      'Ocorreu um erro ao processar os dados.\n\n' + (e.message||e) +
+      '\n\nVerifique se os links CSV das abas estão corretos e se a planilha está publicada na web.';
+  }
+}
+
+/* === LISTENERS === */
+document.querySelectorAll('.nav-item').forEach(item=>{
+  item.addEventListener('click', ()=>showModule(item.dataset.module));
+});
+document.getElementById('filter-ano').addEventListener('change', aplicarFiltro);
+document.getElementById('filter-mes').addEventListener('change', aplicarFiltro);
+document.getElementById('btn-reload').addEventListener('click', async ()=>{
+  document.getElementById('loader').style.display = 'flex';
+  await init();
+});
+
+/* GO */
+init();
+
+</script>
+</body>
+</html>
