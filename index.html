@@ -11,21 +11,24 @@
 /* === BASE === */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg:       #f4f2ec;
-  --bg2:      #ebe8df;
+  /* Paleta oficial Gaibina (mesma da planilha e do deck institucional):
+     grafite + verde sao a ancora da marca. Azul/ambar/vermelho seguem a
+     convencao semantica do design_system.md (dado/aviso/negativo). */
+  --bg:       #faf9f6;
+  --bg2:      #f1f0ea;
   --card:     #ffffff;
-  --ink:      #1f2d2a;
-  --ink-soft: #4a5a55;
-  --petrol:   #1f4e5f;
-  --petrol2:  #2d7a8c;
-  --sand:     #e8a44d;
-  --sand2:    #f0b968;
-  --green:    #3a8a6d;
-  --amber:    #d99a2b;
-  --red:      #c0563f;
-  --line:     #ddd8cc;
-  --line2:    #e8e4d8;
-  --muted:    #8a8577;
+  --ink:      #3f3f3f;
+  --ink-soft: #6b6b6b;
+  --petrol:   #3f3f3f;  /* grafite — cor primaria da marca */
+  --petrol2:  #5c5c5c;  /* cinza escuro (mesmo tom dos headers de tabela da planilha) */
+  --sand:     #6fa53c;  /* verde claro — destaque secundario */
+  --sand2:    #8fbf5c;
+  --green:    #4f7a28;  /* verde escuro — positivo/calculado */
+  --amber:    #d99a2b;  /* ambar — ja era identico a marca */
+  --red:      #c0563f;  /* vermelho — ja era identico a marca */
+  --line:     #e2dfd6;
+  --line2:    #ece9e1;
+  --muted:    #7a7a7a;
   --sidebar:  236px;
   --header:   62px;
   --shadow-sm: 0 1px 3px rgba(31,45,42,.06), 0 1px 2px rgba(31,45,42,.04);
@@ -67,7 +70,7 @@ body {
 .header-sub { font-size: 11px; color: var(--muted); margin-top: 1px; letter-spacing: .03em; font-weight: 500; }
 .header-divider { width: 1px; height: 24px; background: var(--line); }
 .header-status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--ink-soft); font-weight: 500; }
-.header-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(58,138,109,.15); }
+.header-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(79,122,40,.15); }
 .btn-reload { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; display: flex; align-items: center; gap: 6px; }
 .btn-reload:hover { border-color: var(--petrol2); color: var(--petrol); }
 
@@ -146,15 +149,15 @@ body {
 
 /* === BADGES === */
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: .01em; }
-.badge-green { background: rgba(58,138,109,.12); color: var(--green); }
+.badge-green { background: rgba(79,122,40,.12); color: var(--green); }
 .badge-amber { background: rgba(217,154,43,.14); color: var(--amber); }
 .badge-red { background: rgba(192,86,63,.12); color: var(--red); }
-.badge-petrol { background: rgba(45,122,140,.12); color: var(--petrol2); }
+.badge-petrol { background: rgba(92,92,92,.12); color: var(--petrol2); }
 .badge-muted { background: var(--bg2); color: var(--muted); }
 
 /* === STATUS PILL (saúde) === */
 .health-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 24px; font-size: 14px; font-weight: 700; font-family: 'Fraunces', serif; }
-.health-green { background: rgba(58,138,109,.13); color: var(--green); }
+.health-green { background: rgba(79,122,40,.13); color: var(--green); }
 .health-amber { background: rgba(217,154,43,.15); color: var(--amber); }
 .health-red { background: rgba(192,86,63,.13); color: var(--red); }
 
@@ -178,7 +181,7 @@ body {
 .insight-txt strong { color: var(--ink); font-weight: 700; }
 .insight.warn { background: rgba(217,154,43,.06); border-color: rgba(217,154,43,.2); }
 .insight.danger { background: rgba(192,86,63,.05); border-color: rgba(192,86,63,.2); }
-.insight.good { background: rgba(58,138,109,.05); border-color: rgba(58,138,109,.2); }
+.insight.good { background: rgba(79,122,40,.05); border-color: rgba(79,122,40,.2); }
 
 /* === MISC === */
 .empty { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 13px; }
@@ -186,6 +189,46 @@ body {
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: repeat(2,1fr); }
   .grid-2, .grid-2-1, .grid-3 { grid-template-columns: 1fr; }
+}
+/* === MOBILE === */
+@media (max-width: 720px) {
+  .header { padding: 0 14px; gap: 10px; }
+  .header-title { font-size: 15px; }
+  .header-sub { display: none; }
+  .header-divider { display: none; }
+  .header-status { gap: 6px; font-size: 10px; }
+  .btn-reload span { display: none; }
+  .btn-reload { padding: 7px 10px; }
+
+  /* Sidebar vira barra de navegação horizontal rolável, sem sair do fluxo
+     (assim o <main> nao precisa de offset extra calculado à mão). */
+  .sidebar {
+    position: sticky;
+    top: var(--header);
+    left: 0; right: 0; bottom: auto;
+    width: 100%;
+    height: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 10px 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-section, .sidebar-foot { display: none; }
+  .nav-item { flex: 0 0 auto; white-space: nowrap; margin-bottom: 0; padding: 8px 13px; font-size: 12.5px; }
+
+  .main { margin-left: 0; padding: 18px 14px 50px; }
+  .kpi-grid, .kpi-grid.cols-3 { grid-template-columns: 1fr; }
+  .filter-bar { padding: 12px 14px; gap: 10px; }
+
+  /* Tabelas largas (Projetos, Lançamentos) rolam dentro do card em vez de
+     espremer colunas até ficar ilegível. */
+  .panel { padding: 16px; overflow-x: auto; }
+  /* só as tabelas "de verdade" (com thead, muitas colunas) precisam rolar —
+     a tabela simples de Fluxo de Caixa (rótulo|valor) deve caber sem isso */
+  .tbl:has(thead) { min-width: 540px; }
 }
 </style>
 </head>
@@ -219,7 +262,7 @@ body {
   <div class="header-status">
     <div class="header-dot"></div>
     <span id="header-updated">—</span>
-    <button class="btn-reload" id="btn-reload">↻ Atualizar</button>
+    <button class="btn-reload" id="btn-reload">↻ <span>Atualizar</span></button>
   </div>
 </header>
 
@@ -466,7 +509,7 @@ function mkChart(id, cfg) {
 }
 const CHART_FONT = "'Outfit', sans-serif";
 Chart.defaults.font.family = CHART_FONT;
-Chart.defaults.color = '#8a8577';
+Chart.defaults.color = '#7a7a7a';
 /* ============================================================
    DADOS DE FALLBACK — extraidos da planilha viva Gaibina_Zanca_v10
    (Google Sheets, publicada em 02/08/2026). Usados como rede de seguranca
@@ -1287,7 +1330,7 @@ function renderM1() {
       labels: ['Despesa Geral (Estrutura)', 'Custo Direto (Projetos)'],
       datasets: [{
         data: [k.despGerais, k.custosDiretos],
-        backgroundColor: ['#2d7a8c','#e8a44d'],
+        backgroundColor: ['#3f3f3f','#6fa53c'],
         borderWidth: 0
       }]
     },
@@ -1372,15 +1415,15 @@ function renderM2() {
     data:{
       labels: evol.map(e=>e.label),
       datasets:[
-        {label:'Fat. Emitido', data:evol.map(e=>e.emitido), backgroundColor:'#2d7a8c', borderRadius:4, order:2},
-        {label:'Fat. Pago', data:evol.map(e=>e.pago), backgroundColor:'#3a8a6d', borderRadius:4, order:2},
-        {type:'line', label:'Lucro Líquido', data:evol.map(e=>e.lucro), borderColor:'#e8a44d', backgroundColor:'#e8a44d', borderWidth:2.5, tension:.35, pointRadius:3, order:1}
+        {label:'Fat. Emitido', data:evol.map(e=>e.emitido), backgroundColor:'#3f3f3f', borderRadius:4, order:2},
+        {label:'Fat. Pago', data:evol.map(e=>e.pago), backgroundColor:'#4f7a28', borderRadius:4, order:2},
+        {type:'line', label:'Lucro Líquido', data:evol.map(e=>e.lucro), borderColor:'#d99a2b', backgroundColor:'#d99a2b', borderWidth:2.5, tension:.35, pointRadius:3, order:1}
       ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:'bottom', labels:{padding:14,font:{size:11},usePointStyle:true} } },
-      scales:{ y:{ ticks:{ callback:v=>'R$ '+(v/1000)+'k' }, grid:{color:'#e8e4d8'} }, x:{ grid:{display:false} } }
+      scales:{ y:{ ticks:{ callback:v=>'R$ '+(v/1000)+'k' }, grid:{color:'#ece9e1'} }, x:{ grid:{display:false} } }
     }
   });
 
@@ -1389,7 +1432,7 @@ function renderM2() {
     type:'doughnut',
     data:{
       labels: porCC.map(c=>c.nome),
-      datasets:[{ data:porCC.map(c=>c.total), backgroundColor:['#1f4e5f','#2d7a8c','#e8a44d','#3a8a6d','#c0563f','#d99a2b'], borderWidth:0 }]
+      datasets:[{ data:porCC.map(c=>c.total), backgroundColor:['#3f3f3f','#4f7a28','#6fa53c','#2f75b6','#d99a2b','#c0563f'], borderWidth:0 }]
     },
     options:{ responsive:true, maintainAspectRatio:false, cutout:'58%',
       plugins:{ legend:{position:'bottom',labels:{padding:12,font:{size:10.5},usePointStyle:true}} } }
@@ -1401,11 +1444,11 @@ function renderM2() {
     type:'bar',
     data:{
       labels: topCat.map(c=>c.nome),
-      datasets:[{ data:topCat.map(c=>c.total), backgroundColor:'#2d7a8c', borderRadius:4 }]
+      datasets:[{ data:topCat.map(c=>c.total), backgroundColor:'#4f7a28', borderRadius:4 }]
     },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false} },
-      scales:{ x:{ ticks:{callback:v=>'R$ '+(v/1000)+'k'}, grid:{color:'#e8e4d8'} }, y:{grid:{display:false}} } }
+      scales:{ x:{ ticks:{callback:v=>'R$ '+(v/1000)+'k'}, grid:{color:'#ece9e1'} }, y:{grid:{display:false}} } }
   });
 }
 /* ---- M3: LANÇAMENTOS ---- */
@@ -1524,7 +1567,7 @@ function renderM3() {
     data:{
       labels:['✅ Pagas','🟡 A Vencer','🔴 Vencidas','🟢 Emitidas'],
       datasets:[{ data:[stCount.Paga,stCount['A Vencer'],stCount.Vencida,stCount.Emitida],
-        backgroundColor:['#3a8a6d','#d99a2b','#c0563f','#2d7a8c'], borderWidth:0 }]
+        backgroundColor:['#4f7a28','#d99a2b','#c0563f','#3f3f3f'], borderWidth:0 }]
     },
     options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
       plugins:{ legend:{position:'bottom',labels:{padding:12,font:{size:10.5},usePointStyle:true}} } }
@@ -1646,13 +1689,13 @@ function renderM4() {
     data:{
       labels: porCliente.map(c=>c.cliente),
       datasets:[
-        {label:'Receita', data:porCliente.map(c=>c.receita), backgroundColor:'#2d7a8c', borderRadius:4},
-        {label:'Resultado', data:porCliente.map(c=>c.resultado), backgroundColor:'#e8a44d', borderRadius:4}
+        {label:'Receita', data:porCliente.map(c=>c.receita), backgroundColor:'#3f3f3f', borderRadius:4},
+        {label:'Resultado', data:porCliente.map(c=>c.resultado), backgroundColor:'#6fa53c', borderRadius:4}
       ]
     },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{position:'bottom',labels:{padding:12,font:{size:11},usePointStyle:true}} },
-      scales:{ x:{ ticks:{callback:v=>'R$ '+(v/1000)+'k'}, grid:{color:'#e8e4d8'} }, y:{grid:{display:false}} } }
+      scales:{ x:{ ticks:{callback:v=>'R$ '+(v/1000)+'k'}, grid:{color:'#ece9e1'} }, y:{grid:{display:false}} } }
   });
 
   // Margem por projeto
@@ -1662,12 +1705,12 @@ function renderM4() {
     data:{
       labels: projMargem.map(p=>p.nome),
       datasets:[{ data:projMargem.map(p=>p.margem*100),
-        backgroundColor:projMargem.map(p=>p.margem>=0.3?'#3a8a6d':p.margem>=0.15?'#d99a2b':'#c0563f'),
+        backgroundColor:projMargem.map(p=>p.margem>=0.3?'#4f7a28':p.margem>=0.15?'#d99a2b':'#c0563f'),
         borderRadius:4 }]
     },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.x.toFixed(1)+'%'}} },
-      scales:{ x:{ ticks:{callback:v=>v+'%'}, grid:{color:'#e8e4d8'} }, y:{grid:{display:false}} } }
+      scales:{ x:{ ticks:{callback:v=>v+'%'}, grid:{color:'#ece9e1'} }, y:{grid:{display:false}} } }
   });
 }
 /* ============================================================
@@ -1767,6 +1810,10 @@ async function carregarDados() {
   const nfsTxt = await fetchCSV(CSV.nfs);
   DATA.nfs = nfsTxt ? parseNFs(parseCSV(nfsTxt, ['nº nf','no nf','numero','n nf'])) : (usouFallback=true, [...FALLBACK.nfs]);
   if (nfsTxt && !DATA.nfs.length) DATA.nfs = [...FALLBACK.nfs];
+  // NFs canceladas ficam marcadas como "(CANCELADA)" no próprio nome do cliente
+  // na planilha (não é um Status à parte) — sem isso, sobram como notas "Emitidas"
+  // fantasma (R$0, sem vencimento) nas listas de A Receber.
+  DATA.nfs = DATA.nfs.filter(n => !/cancelad/i.test(n.cliente));
 
   // Despesas
   const despTxt = await fetchCSV(CSV.despesas);
