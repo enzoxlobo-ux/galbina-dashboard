@@ -113,9 +113,9 @@ body {
 /* === CARDS / KPI === */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
 .kpi-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
-.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: transform .15s, box-shadow .15s; }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow-sm); position: relative; transition: transform .15s, box-shadow .15s; }
 .kpi:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.kpi::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: var(--petrol2); }
+.kpi::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; border-radius: 14px 14px 0 0; background: var(--petrol2); }
 .kpi.accent-green::before { background: var(--green); }
 .kpi.accent-red::before { background: var(--red); }
 .kpi.accent-sand::before { background: var(--sand); }
@@ -231,6 +231,40 @@ body {
      Saldo por Conta) devem caber inteiras sem isso */
   .tbl-wide { min-width: 540px; }
 }
+
+/* === TOOLTIPS (explicação ao passar o cursor) === */
+[data-tip] { position: relative; cursor: help; border-bottom: 1px dotted var(--line); width: fit-content; }
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%; bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(4px);
+  background: var(--ink); color: #fff;
+  font-family: 'Outfit', sans-serif; font-size: 11.5px; font-weight: 500; line-height: 1.5;
+  letter-spacing: 0; text-transform: none;
+  padding: 9px 12px; border-radius: 9px;
+  width: max-content; max-width: 230px; text-align: left;
+  box-shadow: var(--shadow-md);
+  opacity: 0; visibility: hidden;
+  transition: opacity .15s ease, transform .15s ease;
+  z-index: 300; pointer-events: none;
+}
+[data-tip]::before {
+  content: '';
+  position: absolute;
+  left: 50%; bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--ink);
+  opacity: 0; visibility: hidden;
+  transition: opacity .15s ease;
+  z-index: 300; pointer-events: none;
+}
+[data-tip]:hover::after, [data-tip]:hover::before { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+.kpi-label[data-tip], .panel-title[data-tip] { display: inline-flex; }
+@media (hover: none) {
+  [data-tip] { border-bottom-style: dotted; }
+  [data-tip]:hover::after, [data-tip]:hover::before { display: none; }
+}
 </style>
 </head>
 <body>
@@ -271,6 +305,7 @@ body {
 <nav class="sidebar">
   <div class="nav-section">Visão</div>
   <div class="nav-item active" data-module="M1"><span class="nav-icon">◆</span> Visão Geral</div>
+  <div class="nav-item" data-module="M5"><span class="nav-icon">◐</span> Caixa</div>
   <div class="nav-section">Análise</div>
   <div class="nav-item" data-module="M2"><span class="nav-icon">◇</span> Insights &amp; Análises</div>
   <div class="nav-item" data-module="M3"><span class="nav-icon">◈</span> Lançamentos</div>
@@ -309,6 +344,13 @@ body {
     <div class="mod-title">Visão Geral</div>
     <div class="mod-sub">Indicadores consolidados do período selecionado</div>
     <div id="m1-content"></div>
+  </div>
+
+  <!-- M5 — CAIXA -->
+  <div class="module" id="M5">
+    <div class="mod-title">Caixa</div>
+    <div class="mod-sub">O que está disponível, investido e a posição de caixa projetada</div>
+    <div id="m5-content"></div>
   </div>
 
   <!-- M2 — INSIGHTS & ANÁLISES -->
@@ -1227,6 +1269,32 @@ function calcularKPIs() {
   };
 }
 
+/* Previsão de caixa: saldo disponível hoje + o que está previsto entrar
+   (NFs ainda não recebidas, vencendo dentro da janela) - o que está previsto
+   sair (despesas a pagar, vencendo dentro da janela), pros próximos N dias.
+   Lançamentos sem data de vencimento ficam de fora — não dá pra projetar no
+   tempo o que não tem data. */
+function previsaoCaixa(janelas=[7,15,30]) {
+  const hoje = new Date();
+  const saldoAtual = DATA.contas.filter(c=>!c.investido).reduce((s,c)=>s+c.saldo,0);
+  return janelas.map(dias => {
+    const limite = new Date(hoje.getTime() + dias*864e5);
+    const entradas = DATA.nfs
+      .filter(n => statusNF(n)!=='Paga')
+      .reduce((s,n) => {
+        const venc = parseDateBR(n.vencimento);
+        return (venc && venc<=limite) ? s+n.valorBruto : s;
+      }, 0);
+    const saidas = DATA.despesas
+      .filter(d => d.status==='A Pagar'||d.status==='Atrasado')
+      .reduce((s,d) => {
+        const venc = parseDateBR(d.vencimento);
+        return (venc && venc<=limite) ? s+d.valor : s;
+      }, 0);
+    return { dias, entradas, saidas, saldoProjetado: saldoAtual+entradas-saidas };
+  });
+}
+
 /* Agrega despesas por uma chave (centroCusto, categoria, etc.) */
 function agruparDespesas(campo) {
   const despNoPeriodo = filtrarPorData(DATA.despesas, 'data');
@@ -1312,67 +1380,24 @@ function renderM1() {
       </div>
     </div>
 
-    <div class="panel-title" style="margin-bottom:2px">💰 Posição de Caixa</div>
-    <div class="panel-sub" style="margin-bottom:12px">O que está disponível, investido, a receber e a pagar agora</div>
-    <div class="kpi-grid">
-      <div class="kpi accent-green">
-        <div class="kpi-label">💰 Total em Caixa</div>
-        <div class="kpi-value green">${fmtBRL(k.totalCaixa)}</div>
-        <div class="kpi-foot">Contas correntes, disponível hoje</div>
-      </div>
-      <div class="kpi accent-sand">
-        <div class="kpi-label">📈 Total Investido</div>
-        <div class="kpi-value sand">${fmtBRL(k.totalInvestido)}</div>
-        <div class="kpi-foot">Aplicações</div>
-      </div>
-      <div class="kpi accent-green">
-        <div class="kpi-label">🟡 A Receber no Mês</div>
-        <div class="kpi-value green">${fmtBRL(k.aReceberMes)}</div>
-        <div class="kpi-foot">NFs com vencimento este mês</div>
-      </div>
-      <div class="kpi accent-red">
-        <div class="kpi-label">📤 A Pagar no Mês</div>
-        <div class="kpi-value red">${fmtBRL(k.aPagarMes)}</div>
-        <div class="kpi-foot">Despesas com vencimento este mês</div>
-      </div>
-    </div>
-
-    ${DATA.contas.length ? `
-    <div class="panel" style="margin-bottom:18px">
-      <div class="panel-title">Saldo por Conta</div>
-      <div class="panel-sub">Posição em cada conta bancária, hoje</div>
-      <table class="tbl">
-        <thead><tr><th>Conta</th><th></th><th class="r">Saldo Atual</th></tr></thead>
-        <tbody>
-          ${DATA.contas.map(c=>`
-            <tr>
-              <td class="strong">${c.nome}</td>
-              <td>${c.investido ? '<span class="badge badge-amber">📈 Investido</span>' : '<span class="badge badge-green">💰 Disponível</span>'}</td>
-              <td class="r strong">${fmtBRL(c.saldo)}</td>
-            </tr>`).join('')}
-          <tr class="tbl-total"><td>Total</td><td></td><td class="r">${fmtBRL(k.totalCaixa + k.totalInvestido)}</td></tr>
-        </tbody>
-      </table>
-    </div>` : ''}
-
     <div class="kpi-grid">
       <div class="kpi accent-sand">
-        <div class="kpi-label">💵 Faturamento Emitido</div>
+        <div class="kpi-label" data-tip="Soma do valor bruto de todas as notas fiscais emitidas no período, recebidas ou não.">💵 Faturamento Emitido</div>
         <div class="kpi-value petrol">${fmtBRL(k.fatEmitido)}</div>
         <div class="kpi-foot">Notas fiscais emitidas</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-label">💰 Faturamento Pago</div>
+        <div class="kpi-label" data-tip="Soma das notas fiscais cujo pagamento caiu na conta dentro do período — regime de caixa, não de emissão.">💰 Faturamento Pago</div>
         <div class="kpi-value green">${fmtBRL(k.fatPago)}</div>
         <div class="kpi-foot">Eficiência: ${fmtPct(k.eficiencia)}</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-label">💸 Despesas Pagas</div>
+        <div class="kpi-label" data-tip="Soma de todas as despesas com status Pago dentro do período, sejam gerais (estrutura) ou diretas (vinculadas a projeto).">💸 Despesas Pagas</div>
         <div class="kpi-value red">${fmtBRL(k.totalDespesas)}</div>
         <div class="kpi-foot">Gerais ${fmtBRL(k.despGerais)} · Diretas ${fmtBRL(k.custosDiretos)}</div>
       </div>
       <div class="kpi ${k.lucro>=0?'accent-green':'accent-red'}">
-        <div class="kpi-label">✨ Lucro Líquido</div>
+        <div class="kpi-label" data-tip="Faturamento Pago menos Despesas Pagas no período. É o resultado em regime de caixa, não o lucro contábil por competência.">✨ Lucro Líquido</div>
         <div class="kpi-value ${k.lucro>=0?'green':'red'}">${fmtBRL(k.lucro)}</div>
         <div class="kpi-foot ${k.lucro>=0?'up':'down'}">Margem: ${fmtPct(k.margem)}</div>
       </div>
@@ -1380,40 +1405,26 @@ function renderM1() {
 
     <div class="kpi-grid cols-3">
       <div class="kpi">
-        <div class="kpi-label">📊 Margem Líquida</div>
+        <div class="kpi-label" data-tip="Lucro Líquido dividido pelo Faturamento Pago. Mostra quanto sobra de cada real recebido depois das despesas.">📊 Margem Líquida</div>
         <div class="kpi-value">${fmtPct(k.margem)}</div>
         <div class="kpi-foot">Meta: ${fmtPct(DATA.config.metaMargem||0.30)}</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">⚡ Índice de Eficiência</div>
+        <div class="kpi-label" data-tip="Faturamento Pago dividido pelo Faturamento Emitido. Mede quanto do que foi faturado já virou dinheiro em caixa.">⚡ Índice de Eficiência</div>
         <div class="kpi-value">${fmtPct(k.eficiencia)}</div>
         <div class="kpi-foot">Pago ÷ Emitido</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">⏱️ Prazo Médio Receb.</div>
+        <div class="kpi-label" data-tip="Média de dias entre a emissão da nota fiscal e a data em que ela foi efetivamente recebida.">⏱️ Prazo Médio Receb.</div>
         <div class="kpi-value">${Math.round(k.prazoMedio)} dias</div>
         <div class="kpi-foot">Da emissão ao recebimento</div>
       </div>
     </div>
 
-    <div class="grid-2-1">
-      <div class="panel">
-        <div class="panel-title">Fluxo de Caixa Projetado</div>
-        <div class="panel-sub">Posição de recebimentos e pagamentos futuros</div>
-        <table class="tbl">
-          <tbody>
-            <tr><td class="strong">🟡 A Receber no Mês</td><td class="r strong">${fmtBRL(k.aReceberMes)}</td></tr>
-            <tr><td>📅 A Receber Próximos Meses</td><td class="r">${fmtBRL(k.aReceberFuturo)}</td></tr>
-            <tr><td>🔴 NFs Vencidas <span class="badge badge-red">alerta</span></td><td class="r" style="color:var(--red);font-weight:700">${fmtBRL(k.vencido)}</td></tr>
-            <tr><td>📤 Despesas a Pagar</td><td class="r">${fmtBRL(k.aPagar)}</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="panel">
-        <div class="panel-title">Composição de Despesas</div>
-        <div class="panel-sub">Estrutura vs. produção</div>
-        <div class="chart-wrap short"><canvas id="m1-donut"></canvas></div>
-      </div>
+    <div class="panel">
+      <div class="panel-title" data-tip="Quanto das despesas pagas é estrutura fixa do negócio (aluguel, folha, etc.) versus custo direto vinculado a um projeto específico.">Composição de Despesas</div>
+      <div class="panel-sub">Estrutura vs. produção</div>
+      <div class="chart-wrap short"><canvas id="m1-donut"></canvas></div>
     </div>
   `;
 
@@ -1433,6 +1444,79 @@ function renderM1() {
       plugins:{ legend:{ position:'bottom', labels:{ padding:14, font:{size:11}, usePointStyle:true } } }
     }
   });
+}
+
+/* ---- M5: CAIXA ---- */
+function renderM5() {
+  const k = calcularKPIs();
+  const previsao = previsaoCaixa();
+
+  document.getElementById('m5-content').innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi accent-green">
+        <div class="kpi-label" data-tip="Soma do saldo atual de todas as contas que não são de investimento/aplicação — dinheiro pronto pra usar hoje.">💰 Total em Caixa</div>
+        <div class="kpi-value green">${fmtBRL(k.totalCaixa)}</div>
+        <div class="kpi-foot">Contas correntes, disponível hoje</div>
+      </div>
+      <div class="kpi accent-sand">
+        <div class="kpi-label" data-tip="Soma do saldo atual das contas classificadas como Aplicação em Configurações. Não conta como caixa disponível imediato.">📈 Total Investido</div>
+        <div class="kpi-value sand">${fmtBRL(k.totalInvestido)}</div>
+        <div class="kpi-foot">Aplicações</div>
+      </div>
+      <div class="kpi accent-green">
+        <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento dentro do mês atual.">🟡 A Receber no Mês</div>
+        <div class="kpi-value green">${fmtBRL(k.aReceberMes)}</div>
+        <div class="kpi-foot">NFs com vencimento este mês</div>
+      </div>
+      <div class="kpi accent-red">
+        <div class="kpi-label" data-tip="Despesas com status A Pagar ou Atrasado, com vencimento dentro do mês atual.">📤 A Pagar no Mês</div>
+        <div class="kpi-value red">${fmtBRL(k.aPagarMes)}</div>
+        <div class="kpi-foot">Despesas com vencimento este mês</div>
+      </div>
+    </div>
+
+    ${DATA.contas.length ? `
+    <div class="panel" style="margin-bottom:18px">
+      <div class="panel-title" data-tip="Saldo de cada conta bancária, já considerando entradas e saídas até hoje — inclusive transferências e rendimentos.">Saldo por Conta</div>
+      <div class="panel-sub">Posição em cada conta bancária, hoje</div>
+      <table class="tbl">
+        <thead><tr><th>Conta</th><th></th><th class="r">Saldo Atual</th></tr></thead>
+        <tbody>
+          ${DATA.contas.map(c=>`
+            <tr>
+              <td class="strong">${c.nome}</td>
+              <td>${c.investido ? '<span class="badge badge-amber">📈 Investido</span>' : '<span class="badge badge-green">💰 Disponível</span>'}</td>
+              <td class="r strong">${fmtBRL(c.saldo)}</td>
+            </tr>`).join('')}
+          <tr class="tbl-total"><td>Total</td><td></td><td class="r">${fmtBRL(k.totalCaixa + k.totalInvestido)}</td></tr>
+        </tbody>
+      </table>
+    </div>` : ''}
+
+    <div class="panel-title" data-tip="Saldo disponível hoje somado ao que está previsto entrar (NFs a receber) e sair (despesas a pagar) até o fim de cada janela." style="margin-bottom:2px">Previsão de Caixa</div>
+    <div class="panel-sub" style="margin-bottom:12px">Saldo projetado, considerando o que está previsto entrar e sair</div>
+    <div class="kpi-grid cols-3">
+      ${previsao.map(p=>`
+        <div class="kpi ${p.saldoProjetado>=0?'accent-green':'accent-red'}">
+          <div class="kpi-label" data-tip="Saldo em caixa hoje (${fmtBRL(k.totalCaixa)}) + entradas previstas (${fmtBRL(p.entradas)}) − saídas previstas (${fmtBRL(p.saidas)}) até daqui a ${p.dias} dias.">📆 Próximos ${p.dias} dias</div>
+          <div class="kpi-value ${p.saldoProjetado>=0?'green':'red'}">${fmtBRL(p.saldoProjetado)}</div>
+          <div class="kpi-foot"><span style="color:var(--green)">+${fmtBRL(p.entradas)}</span> · <span style="color:var(--red)">−${fmtBRL(p.saidas)}</span></div>
+        </div>`).join('')}
+    </div>
+
+    <div class="panel">
+      <div class="panel-title" data-tip="Recebimentos e pagamentos ainda não liquidados, agrupados por prazo — separado do saldo já confirmado em conta.">Fluxo de Caixa Projetado</div>
+      <div class="panel-sub">Posição de recebimentos e pagamentos futuros</div>
+      <table class="tbl">
+        <tbody>
+          <tr><td class="strong">🟡 A Receber no Mês</td><td class="r strong">${fmtBRL(k.aReceberMes)}</td></tr>
+          <tr><td>📅 A Receber Próximos Meses</td><td class="r">${fmtBRL(k.aReceberFuturo)}</td></tr>
+          <tr><td>🔴 NFs Vencidas <span class="badge badge-red">alerta</span></td><td class="r" style="color:var(--red);font-weight:700">${fmtBRL(k.vencido)}</td></tr>
+          <tr><td>📤 Despesas a Pagar</td><td class="r">${fmtBRL(k.aPagar)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 /* ---- M2: INSIGHTS & ANÁLISES ---- */
@@ -1472,26 +1556,26 @@ function renderM2() {
 
   document.getElementById('m2-content').innerHTML = `
     <div class="panel" style="margin-bottom:18px">
-      <div class="panel-title">Evolução Mensal — ${FILTRO.ano}</div>
+      <div class="panel-title" data-tip="Compara, mês a mês, o que foi faturado (emitido), o que efetivamente entrou (pago) e o lucro líquido resultante.">Evolução Mensal — ${FILTRO.ano}</div>
       <div class="panel-sub">Faturamento emitido, pago e lucro líquido mês a mês</div>
       <div class="chart-wrap tall"><canvas id="m2-evol"></canvas></div>
     </div>
 
     <div class="grid-2">
       <div class="panel">
-        <div class="panel-title">Despesas por Centro de Custo</div>
+        <div class="panel-title" data-tip="Despesas pagas no período, agrupadas por centro de custo (ex: Produção, Administrativo) — mostra em qual área da operação o dinheiro está sendo gasto.">Despesas por Centro de Custo</div>
         <div class="panel-sub">Para onde o dinheiro está indo</div>
         <div class="chart-wrap"><canvas id="m2-cc"></canvas></div>
       </div>
       <div class="panel">
-        <div class="panel-title">Despesas por Categoria</div>
+        <div class="panel-title" data-tip="As 7 categorias de despesa com maior valor pago no período, da maior para a menor.">Despesas por Categoria</div>
         <div class="panel-sub">Top categorias do período</div>
         <div class="chart-wrap"><canvas id="m2-cat"></canvas></div>
       </div>
     </div>
 
     <div class="panel">
-      <div class="panel-title">Leitura Executiva</div>
+      <div class="panel-title" data-tip="Alertas e observações calculados automaticamente a partir dos números do período — concentração de cliente, margem abaixo da meta, notas vencidas, etc.">Leitura Executiva</div>
       <div class="panel-sub">Insights automáticos do período</div>
       <div class="insight-list">
         ${insights.map(i=>`
@@ -1572,22 +1656,22 @@ function renderM3() {
   document.getElementById('m3-content').innerHTML = `
     <div class="kpi-grid">
       <div class="kpi accent-green">
-        <div class="kpi-label">🟡 A Receber no Mês</div>
+        <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento dentro do mês atual.">🟡 A Receber no Mês</div>
         <div class="kpi-value green">${fmtBRL(k.aReceberMes)}</div>
         <div class="kpi-foot">NFs com vencimento neste mês</div>
       </div>
       <div class="kpi accent-sand">
-        <div class="kpi-label">📅 A Receber — Futuro</div>
+        <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento depois do fim do mês atual.">📅 A Receber — Futuro</div>
         <div class="kpi-value sand">${fmtBRL(k.aReceberFuturo)}</div>
         <div class="kpi-foot">Próximos meses</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-label">🔴 NFs Vencidas</div>
+        <div class="kpi-label" data-tip="Notas fiscais cujo vencimento já passou e ainda não foram recebidas. Prioridade de cobrança.">🔴 NFs Vencidas</div>
         <div class="kpi-value red">${fmtBRL(k.vencido)}</div>
         <div class="kpi-foot">${vencidas.length} nota${vencidas.length!==1?'s':''} em atraso</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-label">📤 Despesas a Pagar</div>
+        <div class="kpi-label" data-tip="Todas as despesas com status A Pagar ou Atrasado, sem filtro de data — visão geral do compromisso pendente.">📤 Despesas a Pagar</div>
         <div class="kpi-value red">${fmtBRL(k.aPagar)}</div>
         <div class="kpi-foot">${aPagar.length} lançamento${aPagar.length!==1?'s':''} pendente${aPagar.length!==1?'s':''}</div>
       </div>
@@ -1595,7 +1679,7 @@ function renderM3() {
 
     ${vencidas.length ? `
     <div class="panel" style="margin-bottom:18px;border-color:rgba(192,86,63,.3)">
-      <div class="panel-title" style="color:var(--red)">⚠️ Notas Fiscais Vencidas — Ação Necessária</div>
+      <div class="panel-title" style="color:var(--red)" data-tip="Notas com vencimento no passado e sem data de recebimento — ação de cobrança recomendada.">⚠️ Notas Fiscais Vencidas — Ação Necessária</div>
       <div class="panel-sub">Cobrança prioritária</div>
       <table class="tbl tbl-wide">
         <thead><tr><th>NF</th><th>Cliente</th><th>Projeto</th><th>Vencimento</th><th class="r">Valor</th></tr></thead>
@@ -1614,7 +1698,7 @@ function renderM3() {
 
     <div class="grid-2-1">
       <div class="panel">
-        <div class="panel-title">A Receber — Próximas Notas</div>
+        <div class="panel-title" data-tip="Notas fiscais emitidas que ainda não foram recebidas, ordenadas pela data de vencimento mais próxima.">A Receber — Próximas Notas</div>
         <div class="panel-sub">Notas emitidas aguardando recebimento</div>
         <table class="tbl tbl-wide">
           <thead><tr><th>NF</th><th>Cliente</th><th>Vencimento</th><th></th><th class="r">Valor</th></tr></thead>
@@ -1631,14 +1715,14 @@ function renderM3() {
         </table>
       </div>
       <div class="panel">
-        <div class="panel-title">Status das NFs</div>
+        <div class="panel-title" data-tip="Todas as NFs do período, classificadas em Pagas, A Vencer, Vencidas ou Emitidas sem vencimento definido.">Status das NFs</div>
         <div class="panel-sub">Distribuição geral</div>
         <div class="chart-wrap short"><canvas id="m3-status"></canvas></div>
       </div>
     </div>
 
     <div class="panel">
-      <div class="panel-title">Despesas a Pagar</div>
+      <div class="panel-title" data-tip="Lançamentos de despesa com status A Pagar ou Atrasado, ordenados por data.">Despesas a Pagar</div>
       <div class="panel-sub">Compromissos financeiros pendentes</div>
       <table class="tbl tbl-wide">
         <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Centro de Custo</th><th class="r">Valor</th></tr></thead>
@@ -1695,22 +1779,22 @@ function renderM4() {
   document.getElementById('m4-content').innerHTML = `
     <div class="kpi-grid">
       <div class="kpi accent-sand">
-        <div class="kpi-label">🎬 Projetos em Andamento</div>
+        <div class="kpi-label" data-tip="Projetos com status Em Andamento, do total de projetos cadastrados.">🎬 Projetos em Andamento</div>
         <div class="kpi-value sand">${emAndamento.length}</div>
         <div class="kpi-foot">De ${projs.length} cadastrados</div>
       </div>
       <div class="kpi accent-sand">
-        <div class="kpi-label">📝 Total a Faturar</div>
+        <div class="kpi-label" data-tip="Soma da receita prevista de todos os projetos ainda Em Andamento — o que falta faturar quando forem concluídos.">📝 Total a Faturar</div>
         <div class="kpi-value petrol">${fmtBRL(aFaturar)}</div>
         <div class="kpi-foot">Projetos em andamento</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-label">📈 Margem Média</div>
+        <div class="kpi-label" data-tip="Média da margem (resultado ÷ receita) apenas dos projetos com status Pago.">📈 Margem Média</div>
         <div class="kpi-value green">${fmtPct(margemMedia)}</div>
         <div class="kpi-foot">Projetos já pagos</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-label">🏆 Mais Lucrativo</div>
+        <div class="kpi-label" data-tip="Projeto com o maior resultado (receita líquida menos custo e comissão) entre todos os cadastrados.">🏆 Mais Lucrativo</div>
         <div class="kpi-value" style="font-size:18px">${maisLucrativo?maisLucrativo.nome:'—'}</div>
         <div class="kpi-foot up">${maisLucrativo?fmtBRL(maisLucrativo.resultado)+' · '+fmtPct(maisLucrativo.margem):''}</div>
       </div>
@@ -1718,19 +1802,19 @@ function renderM4() {
 
     <div class="grid-2">
       <div class="panel">
-        <div class="panel-title">Receita por Cliente</div>
+        <div class="panel-title" data-tip="Receita total e resultado (lucro) de cada cliente, comparando lado a lado quem fatura mais com quem dá mais retorno.">Receita por Cliente</div>
         <div class="panel-sub">Quem mais gera receita</div>
         <div class="chart-wrap"><canvas id="m4-cliente"></canvas></div>
       </div>
       <div class="panel">
-        <div class="panel-title">Margem por Projeto</div>
+        <div class="panel-title" data-tip="Margem percentual de cada projeto — resultado dividido pela receita, do mais para o menos rentável.">Margem por Projeto</div>
         <div class="panel-sub">Rentabilidade de cada entrega</div>
         <div class="chart-wrap"><canvas id="m4-margem"></canvas></div>
       </div>
     </div>
 
     <div class="panel" style="margin-bottom:18px">
-      <div class="panel-title">Análise Completa por Cliente</div>
+      <div class="panel-title" data-tip="Receita, custo e resultado somados por cliente, considerando todos os projetos que ele já teve.">Análise Completa por Cliente</div>
       <div class="panel-sub">Receita, custo e resultado consolidados</div>
       <table class="tbl tbl-wide">
         <thead><tr><th>Cliente</th><th class="r">Projetos</th><th class="r">Receita</th><th class="r">Custos</th><th class="r">Resultado</th><th class="r">Margem</th></tr></thead>
@@ -1757,7 +1841,7 @@ function renderM4() {
     </div>
 
     <div class="panel">
-      <div class="panel-title">Todos os Projetos</div>
+      <div class="panel-title" data-tip="Receita menos imposto, comissão e custo vinculado — o resultado líquido que cada projeto individual deixou.">Todos os Projetos</div>
       <div class="panel-sub">Detalhamento por projeto — ordenado por resultado</div>
       <table class="tbl tbl-wide">
         <thead><tr><th>Projeto</th><th>Cliente</th><th>Status</th><th class="r">Receita</th><th class="r">Custo</th><th class="r">Resultado</th><th class="r">Margem</th></tr></thead>
@@ -1820,7 +1904,7 @@ function showModule(id) {
 }
 
 function renderAtual(id) {
-  const fn = { M1:renderM1, M2:renderM2, M3:renderM3, M4:renderM4 }[id];
+  const fn = { M1:renderM1, M2:renderM2, M3:renderM3, M4:renderM4, M5:renderM5 }[id];
   if (fn) fn();
 }
 
