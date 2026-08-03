@@ -75,15 +75,15 @@ body {
 .btn-reload:hover { border-color: var(--petrol2); color: var(--petrol); }
 
 /* === SIDEBAR === */
-.sidebar { position: fixed; top: var(--header); left: 0; bottom: 0; width: var(--sidebar); background: var(--card); border-right: 1px solid var(--line); padding: 22px 14px; overflow-y: auto; z-index: 90; }
-.nav-section { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; padding: 0 12px; margin: 22px 0 8px; }
+.sidebar { position: fixed; top: var(--header); left: 0; bottom: 0; width: var(--sidebar); background: #2b2b2b; padding: 22px 14px; overflow-y: auto; z-index: 90; box-shadow: 2px 0 12px rgba(0,0,0,.08); }
+.nav-section { font-size: 10px; font-weight: 700; color: #767676; letter-spacing: .12em; text-transform: uppercase; padding: 0 12px; margin: 22px 0 8px; }
 .nav-section:first-child { margin-top: 4px; }
-.nav-item { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: var(--ink-soft); cursor: pointer; transition: all .14s; margin-bottom: 2px; }
-.nav-item:hover { background: var(--bg2); color: var(--ink); }
-.nav-item.active { background: linear-gradient(135deg, var(--petrol), var(--petrol2)); color: #fff; box-shadow: var(--shadow-sm); font-weight: 600; }
+.nav-item { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: #adadad; cursor: pointer; transition: all .14s; margin-bottom: 2px; }
+.nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+.nav-item.active { background: var(--green); color: #fff; box-shadow: 0 4px 14px rgba(79,122,40,.4); font-weight: 600; }
 .nav-icon { font-size: 16px; width: 20px; text-align: center; }
-.sidebar-foot { margin-top: 28px; padding: 14px 12px; border-top: 1px solid var(--line2); }
-.sidebar-foot-txt { font-size: 10.5px; color: var(--muted); line-height: 1.6; }
+.sidebar-foot { margin-top: 28px; padding: 14px 12px; border-top: 1px solid rgba(255,255,255,.09); }
+.sidebar-foot-txt { font-size: 10.5px; color: #8c8c8c; line-height: 1.6; }
 
 /* === MAIN === */
 .main { margin-left: var(--sidebar); margin-top: var(--header); padding: 28px 34px 60px; max-width: 1500px; }
@@ -119,7 +119,11 @@ body {
 .kpi.accent-green::before { background: var(--green); }
 .kpi.accent-red::before { background: var(--red); }
 .kpi.accent-sand::before { background: var(--sand); }
-.kpi-label { font-size: 11.5px; font-weight: 600; color: var(--muted); letter-spacing: .03em; display: flex; align-items: center; gap: 6px; }
+.kpi-label { font-size: 11.5px; font-weight: 600; color: var(--muted); letter-spacing: .03em; display: flex; align-items: center; gap: 6px; max-width: calc(100% - 44px); }
+.kpi-icon-badge { position: absolute; top: 18px; right: 18px; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; background: var(--bg2); }
+.kpi.accent-green .kpi-icon-badge { background: rgba(79,122,40,.13); }
+.kpi.accent-red .kpi-icon-badge { background: rgba(192,86,63,.12); }
+.kpi.accent-sand .kpi-icon-badge { background: rgba(111,165,60,.15); }
 .kpi-value { font-family: 'Fraunces', serif; font-size: 27px; font-weight: 600; color: var(--ink); margin-top: 8px; letter-spacing: -.02em; }
 .kpi-value.green { color: var(--green); }
 .kpi-value.red { color: var(--red); }
@@ -214,7 +218,7 @@ body {
     overflow-x: auto;
     padding: 10px 14px;
     border-right: none;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid rgba(255,255,255,.09);
   }
   .nav-section, .sidebar-foot { display: none; }
   .nav-item { flex: 0 0 auto; white-space: nowrap; margin-bottom: 0; padding: 8px 13px; font-size: 12.5px; }
@@ -313,7 +317,7 @@ body {
   <div class="sidebar-foot">
     <div class="sidebar-foot-txt">
       Dados sincronizados<br>com a planilha-mestre.<br>
-      <span style="color:var(--petrol2);font-weight:600">Atualização automática.</span>
+      <span style="color:var(--sand);font-weight:600">Atualização automática.</span>
     </div>
   </div>
 </nav>
@@ -1382,22 +1386,26 @@ function renderM1() {
 
     <div class="kpi-grid">
       <div class="kpi accent-sand">
-        <div class="kpi-label" data-tip="Soma do valor bruto de todas as notas fiscais emitidas no período, recebidas ou não.">💵 Faturamento Emitido</div>
+        <div class="kpi-icon-badge">💵</div>
+        <div class="kpi-label" data-tip="Soma do valor bruto de todas as notas fiscais emitidas no período, recebidas ou não.">Faturamento Emitido</div>
         <div class="kpi-value petrol">${fmtBRL(k.fatEmitido)}</div>
         <div class="kpi-foot">Notas fiscais emitidas</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-label" data-tip="Soma das notas fiscais cujo pagamento caiu na conta dentro do período — regime de caixa, não de emissão.">💰 Faturamento Pago</div>
+        <div class="kpi-icon-badge">💰</div>
+        <div class="kpi-label" data-tip="Soma das notas fiscais cujo pagamento caiu na conta dentro do período — regime de caixa, não de emissão.">Faturamento Pago</div>
         <div class="kpi-value green">${fmtBRL(k.fatPago)}</div>
         <div class="kpi-foot">Eficiência: ${fmtPct(k.eficiencia)}</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-label" data-tip="Soma de todas as despesas com status Pago dentro do período, sejam gerais (estrutura) ou diretas (vinculadas a projeto).">💸 Despesas Pagas</div>
+        <div class="kpi-icon-badge">💸</div>
+        <div class="kpi-label" data-tip="Soma de todas as despesas com status Pago dentro do período, sejam gerais (estrutura) ou diretas (vinculadas a projeto).">Despesas Pagas</div>
         <div class="kpi-value red">${fmtBRL(k.totalDespesas)}</div>
         <div class="kpi-foot">Gerais ${fmtBRL(k.despGerais)} · Diretas ${fmtBRL(k.custosDiretos)}</div>
       </div>
       <div class="kpi ${k.lucro>=0?'accent-green':'accent-red'}">
-        <div class="kpi-label" data-tip="Faturamento Pago menos Despesas Pagas no período. É o resultado em regime de caixa, não o lucro contábil por competência.">✨ Lucro Líquido</div>
+        <div class="kpi-icon-badge">✨</div>
+        <div class="kpi-label" data-tip="Faturamento Pago menos Despesas Pagas no período. É o resultado em regime de caixa, não o lucro contábil por competência.">Lucro Líquido</div>
         <div class="kpi-value ${k.lucro>=0?'green':'red'}">${fmtBRL(k.lucro)}</div>
         <div class="kpi-foot ${k.lucro>=0?'up':'down'}">Margem: ${fmtPct(k.margem)}</div>
       </div>
@@ -1405,17 +1413,20 @@ function renderM1() {
 
     <div class="kpi-grid cols-3">
       <div class="kpi">
-        <div class="kpi-label" data-tip="Lucro Líquido dividido pelo Faturamento Pago. Mostra quanto sobra de cada real recebido depois das despesas.">📊 Margem Líquida</div>
+        <div class="kpi-icon-badge">📊</div>
+        <div class="kpi-label" data-tip="Lucro Líquido dividido pelo Faturamento Pago. Mostra quanto sobra de cada real recebido depois das despesas.">Margem Líquida</div>
         <div class="kpi-value">${fmtPct(k.margem)}</div>
         <div class="kpi-foot">Meta: ${fmtPct(DATA.config.metaMargem||0.30)}</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label" data-tip="Faturamento Pago dividido pelo Faturamento Emitido. Mede quanto do que foi faturado já virou dinheiro em caixa.">⚡ Índice de Eficiência</div>
+        <div class="kpi-icon-badge">⚡</div>
+        <div class="kpi-label" data-tip="Faturamento Pago dividido pelo Faturamento Emitido. Mede quanto do que foi faturado já virou dinheiro em caixa.">Índice de Eficiência</div>
         <div class="kpi-value">${fmtPct(k.eficiencia)}</div>
         <div class="kpi-foot">Pago ÷ Emitido</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label" data-tip="Média de dias entre a emissão da nota fiscal e a data em que ela foi efetivamente recebida.">⏱️ Prazo Médio Receb.</div>
+        <div class="kpi-icon-badge">⏱️</div>
+        <div class="kpi-label" data-tip="Média de dias entre a emissão da nota fiscal e a data em que ela foi efetivamente recebida.">Prazo Médio Receb.</div>
         <div class="kpi-value">${Math.round(k.prazoMedio)} dias</div>
         <div class="kpi-foot">Da emissão ao recebimento</div>
       </div>
@@ -1454,22 +1465,26 @@ function renderM5() {
   document.getElementById('m5-content').innerHTML = `
     <div class="kpi-grid">
       <div class="kpi accent-green">
-        <div class="kpi-label" data-tip="Soma do saldo atual de todas as contas que não são de investimento/aplicação — dinheiro pronto pra usar hoje.">💰 Total em Caixa</div>
+        <div class="kpi-icon-badge">💰</div>
+        <div class="kpi-label" data-tip="Soma do saldo atual de todas as contas que não são de investimento/aplicação — dinheiro pronto pra usar hoje.">Total em Caixa</div>
         <div class="kpi-value green">${fmtBRL(k.totalCaixa)}</div>
         <div class="kpi-foot">Contas correntes, disponível hoje</div>
       </div>
       <div class="kpi accent-sand">
-        <div class="kpi-label" data-tip="Soma do saldo atual das contas classificadas como Aplicação em Configurações. Não conta como caixa disponível imediato.">📈 Total Investido</div>
+        <div class="kpi-icon-badge">📈</div>
+        <div class="kpi-label" data-tip="Soma do saldo atual das contas classificadas como Aplicação em Configurações. Não conta como caixa disponível imediato.">Total Investido</div>
         <div class="kpi-value sand">${fmtBRL(k.totalInvestido)}</div>
         <div class="kpi-foot">Aplicações</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento dentro do mês atual.">🟡 A Receber no Mês</div>
+        <div class="kpi-icon-badge">🟡</div>
+        <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento dentro do mês atual.">A Receber no Mês</div>
         <div class="kpi-value green">${fmtBRL(k.aReceberMes)}</div>
         <div class="kpi-foot">NFs com vencimento este mês</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-label" data-tip="Despesas com status A Pagar ou Atrasado, com vencimento dentro do mês atual.">📤 A Pagar no Mês</div>
+        <div class="kpi-icon-badge">📤</div>
+        <div class="kpi-label" data-tip="Despesas com status A Pagar ou Atrasado, com vencimento dentro do mês atual.">A Pagar no Mês</div>
         <div class="kpi-value red">${fmtBRL(k.aPagarMes)}</div>
         <div class="kpi-foot">Despesas com vencimento este mês</div>
       </div>
@@ -1498,7 +1513,8 @@ function renderM5() {
     <div class="kpi-grid cols-3">
       ${previsao.map(p=>`
         <div class="kpi ${p.saldoProjetado>=0?'accent-green':'accent-red'}">
-          <div class="kpi-label" data-tip="Saldo em caixa hoje (${fmtBRL(k.totalCaixa)}) + entradas previstas (${fmtBRL(p.entradas)}) − saídas previstas (${fmtBRL(p.saidas)}) até daqui a ${p.dias} dias.">📆 Próximos ${p.dias} dias</div>
+          <div class="kpi-icon-badge">📆</div>
+          <div class="kpi-label" data-tip="Saldo em caixa hoje (${fmtBRL(k.totalCaixa)}) + entradas previstas (${fmtBRL(p.entradas)}) − saídas previstas (${fmtBRL(p.saidas)}) até daqui a ${p.dias} dias.">Próximos ${p.dias} dias</div>
           <div class="kpi-value ${p.saldoProjetado>=0?'green':'red'}">${fmtBRL(p.saldoProjetado)}</div>
           <div class="kpi-foot"><span style="color:var(--green)">+${fmtBRL(p.entradas)}</span> · <span style="color:var(--red)">−${fmtBRL(p.saidas)}</span></div>
         </div>`).join('')}
@@ -1656,22 +1672,26 @@ function renderM3() {
   document.getElementById('m3-content').innerHTML = `
     <div class="kpi-grid">
       <div class="kpi accent-green">
-        <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento dentro do mês atual.">🟡 A Receber no Mês</div>
+        <div class="kpi-icon-badge">🟡</div>
+        <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento dentro do mês atual.">A Receber no Mês</div>
         <div class="kpi-value green">${fmtBRL(k.aReceberMes)}</div>
         <div class="kpi-foot">NFs com vencimento neste mês</div>
       </div>
       <div class="kpi accent-sand">
-        <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento depois do fim do mês atual.">📅 A Receber — Futuro</div>
+        <div class="kpi-icon-badge">📅</div>
+        <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento depois do fim do mês atual.">A Receber — Futuro</div>
         <div class="kpi-value sand">${fmtBRL(k.aReceberFuturo)}</div>
         <div class="kpi-foot">Próximos meses</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-label" data-tip="Notas fiscais cujo vencimento já passou e ainda não foram recebidas. Prioridade de cobrança.">🔴 NFs Vencidas</div>
+        <div class="kpi-icon-badge">🔴</div>
+        <div class="kpi-label" data-tip="Notas fiscais cujo vencimento já passou e ainda não foram recebidas. Prioridade de cobrança.">NFs Vencidas</div>
         <div class="kpi-value red">${fmtBRL(k.vencido)}</div>
         <div class="kpi-foot">${vencidas.length} nota${vencidas.length!==1?'s':''} em atraso</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-label" data-tip="Todas as despesas com status A Pagar ou Atrasado, sem filtro de data — visão geral do compromisso pendente.">📤 Despesas a Pagar</div>
+        <div class="kpi-icon-badge">📤</div>
+        <div class="kpi-label" data-tip="Todas as despesas com status A Pagar ou Atrasado, sem filtro de data — visão geral do compromisso pendente.">Despesas a Pagar</div>
         <div class="kpi-value red">${fmtBRL(k.aPagar)}</div>
         <div class="kpi-foot">${aPagar.length} lançamento${aPagar.length!==1?'s':''} pendente${aPagar.length!==1?'s':''}</div>
       </div>
@@ -1779,22 +1799,26 @@ function renderM4() {
   document.getElementById('m4-content').innerHTML = `
     <div class="kpi-grid">
       <div class="kpi accent-sand">
-        <div class="kpi-label" data-tip="Projetos com status Em Andamento, do total de projetos cadastrados.">🎬 Projetos em Andamento</div>
+        <div class="kpi-icon-badge">🎬</div>
+        <div class="kpi-label" data-tip="Projetos com status Em Andamento, do total de projetos cadastrados.">Projetos em Andamento</div>
         <div class="kpi-value sand">${emAndamento.length}</div>
         <div class="kpi-foot">De ${projs.length} cadastrados</div>
       </div>
       <div class="kpi accent-sand">
-        <div class="kpi-label" data-tip="Soma da receita prevista de todos os projetos ainda Em Andamento — o que falta faturar quando forem concluídos.">📝 Total a Faturar</div>
+        <div class="kpi-icon-badge">📝</div>
+        <div class="kpi-label" data-tip="Soma da receita prevista de todos os projetos ainda Em Andamento — o que falta faturar quando forem concluídos.">Total a Faturar</div>
         <div class="kpi-value petrol">${fmtBRL(aFaturar)}</div>
         <div class="kpi-foot">Projetos em andamento</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-label" data-tip="Média da margem (resultado ÷ receita) apenas dos projetos com status Pago.">📈 Margem Média</div>
+        <div class="kpi-icon-badge">📈</div>
+        <div class="kpi-label" data-tip="Média da margem (resultado ÷ receita) apenas dos projetos com status Pago.">Margem Média</div>
         <div class="kpi-value green">${fmtPct(margemMedia)}</div>
         <div class="kpi-foot">Projetos já pagos</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-label" data-tip="Projeto com o maior resultado (receita líquida menos custo e comissão) entre todos os cadastrados.">🏆 Mais Lucrativo</div>
+        <div class="kpi-icon-badge">🏆</div>
+        <div class="kpi-label" data-tip="Projeto com o maior resultado (receita líquida menos custo e comissão) entre todos os cadastrados.">Mais Lucrativo</div>
         <div class="kpi-value" style="font-size:18px">${maisLucrativo?maisLucrativo.nome:'—'}</div>
         <div class="kpi-foot up">${maisLucrativo?fmtBRL(maisLucrativo.resultado)+' · '+fmtPct(maisLucrativo.margem):''}</div>
       </div>
