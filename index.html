@@ -226,9 +226,10 @@ body {
   /* Tabelas largas (Projetos, Lançamentos) rolam dentro do card em vez de
      espremer colunas até ficar ilegível. */
   .panel { padding: 16px; overflow-x: auto; }
-  /* só as tabelas "de verdade" (com thead, muitas colunas) precisam rolar —
-     a tabela simples de Fluxo de Caixa (rótulo|valor) deve caber sem isso */
-  .tbl:has(thead) { min-width: 540px; }
+  /* só as tabelas realmente largas (5-6 colunas: Projetos, Vencidas, A Receber,
+     Despesas a Pagar) precisam rolar — tabelas rótulo|valor (Fluxo de Caixa,
+     Saldo por Conta) devem caber inteiras sem isso */
+  .tbl-wide { min-width: 540px; }
 }
 </style>
 </head>
@@ -352,11 +353,12 @@ const CSV = {
   nfs:       pubCSV('456514439'),  // 💰 NFs Emitidas
   despesas:  pubCSV('1605916840'), // 💸 Custos e Despesas
   projetos:  pubCSV('1096513295'), // 🎬 Projetos
-  config:    pubCSV('10264915')    // ⚙️ Configurações
+  config:    pubCSV('10264915'),   // ⚙️ Configurações
+  painel:    pubCSV('153855711')   // 🏠 Painel (saldo por conta bancária, ja calculado la)
 };
 
-/* Enquanto os links não forem colados, o dashboard usa dados de exemplo (fallback)
-   extraídos da planilha ZancaFilms v01 — assim você já vê tudo funcionando. */
+/* Se o fetch ao vivo falhar (offline, CORS, link mudou), o dashboard usa o
+   snapshot real da planilha Gaibina_Zanca_v10 embutido abaixo. */
 const USE_FALLBACK_IF_EMPTY = true;
 
 /* === UTILS DE PARSING === */
@@ -523,6 +525,10 @@ const FALLBACK = {
     aliquota: 0.14,
     metaMargem: 0.3
   },
+  contas: [
+    {nome:'Itaú C/C', saldo:98384, investido:false},
+    {nome:'Itaú Aplicação', saldo:499752, investido:true},
+  ],
   nfs: [
     // Nº, Cliente, Projeto, DataEmissao, DataVenc, DataReceb, ValorBruto
     {numero:'173', cliente:'Netshoes', projeto:'', emissao:'2/23/2023', vencimento:'4/8/2023', recebimento:'08/04/2023', valorBruto:99000},
@@ -611,428 +617,428 @@ const FALLBACK = {
     {numero:'260', cliente:'Quinto Andar', projeto:'', emissao:'7/3/2026', vencimento:'7/22/2026', recebimento:'23/07/2026', valorBruto:106000},
   ],
   despesas: [
-    // Data, Categoria, Subcategoria, Descricao, Valor, Status, CentroCusto, ProjetoVinc
-    {data:'31/12/2025', categoria:'Despesas Gerais', sub:'Diversas (compras mercado, cafés)', descricao:'Total de despesas de 2025 (consolidado)', valor:1697500, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'05/01/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:2754.62, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'12/01/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:192.37, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'05/01/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:2300, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'21/01/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:24000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/01/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'27/01/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:300, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/01/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:172.62, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/01/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:310.64, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'06/01/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4352.68, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'01/01/2026', categoria:'Fornecedores', sub:'Hospedagem, transporte, cursos', descricao:'NF 334 HERNANE TRANSPORTE', valor:280, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'NF 505 EM CURTO', valor:8500, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'NF 29 E NF 30 LUANA ROSALINI', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Colorista', descricao:'NF 128 DRIFT COLOR', valor:8500, status:'Pago', centroCusto:'Pós produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 687 ARARA CRIATIVA', valor:500, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 70 CASSIA FRANCISCA', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 186 MIGUEL BEZERRA', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 586 CANTIDIO MARTINS', valor:2600, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 81 LUCAS RAMOS', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'FAT 9654 CASA DO PRODUTOR', valor:2853.8, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 581 NF 583 CENOTECNICO', valor:3118.45, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 133 MARCIO JOSE', valor:2860, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 82 JOSE CARLOS', valor:1600, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 437 CARLOS JOSE', valor:1110, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 686 ARARA CRIATIVA', valor:6500, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 75 WINIE DOMINIQUE', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 5576 DIRECTIVO', valor:800, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 310 CF FILMES', valor:960, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 78 RODRIGO MESQUITA', valor:1110, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 101 CINE E CAMERA', valor:960, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 31 LUANA ROSALINI', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 3053 CIA DO TP', valor:1900, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 74 ANTONIO CARLOS LEMOS', valor:2640, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 307 CF FILMES', valor:1800, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Diretor', descricao:'NF 216 PRISCILA RODRIGUES', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 136 ALLAN AUDIO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'FAT 90 TAU DIGITAL', valor:11650, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 68 DIEGO GONZALES', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 153 VS LIMA', valor:1800, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 16 CAROLINA SOLDADO', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 717 PITORA ARTES', valor:2500, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 274 LUCAS AYAUHA', valor:5000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 47 EDVALDO APARECIDO', valor:2940, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF MICHAEL RODRIGUES', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 1490 SPECLIGHT', valor:11500, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 1489 SPECLIGHT', valor:21125, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Diretor de Fotografia', descricao:'NF 1095 R P FILMES', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 110 THALYTA CRISTINA', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 2715 CINEGRIP LOCAÇÃO', valor:3602, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Edição', sub:'Editor de vídeo', descricao:'NF 01 PRISCILA REYS THIAGO', valor:5000, status:'Pago', centroCusto:'Pós produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 206 BUFALOS ESPACIAIS', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 396 WBS FILMES', valor:960, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 584 GBS BARRETO', valor:2900, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 309 RAFAELA ROSA', valor:2640, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 384 WBS FILMES', valor:1100, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 699 FERNANDA ARARA CRIATIVA', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'BRUNO CARVALHO', valor:2800, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'LUCAS RAMOS', valor:45000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'LUCIANO DECOURT', valor:19000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF 1059 HES CATERING', valor:8514, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'COMP ENGENHARIA DE TRAFIGO', valor:248.62, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'SPCINE', valor:285, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Hospedagem, transporte, cursos', descricao:'NF 3861 CINE VAN', valor:13500, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF 1058 HES CATERING', valor:14031, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'LUCIANO DECOURT', valor:1250, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'THAIS AGUIAR', valor:6291.23, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 73102 COMPULASER GRAFICA', valor:1580, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'YAGA', valor:1767.19, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 425 ESTUDIO MDS', valor:2130, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 1254 F R A REPRESENTAÇÃO', valor:930, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:912.4, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'LUCIANO DECOURT', valor:1270, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'DIEGO GONZALES', valor:441.83, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'ADEMIR CAETANO  LILLY', valor:1400, status:'Pago', centroCusto:'Pós produção', projeto:''},
-    {data:'20/01/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1401.06, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'16/01/2026', categoria:'Imposto', sub:'Simples Nacional Tradicional', descricao:'SIMPLES NACIONAL', valor:86796.07, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'15/01/2026', categoria:'Despesas Gerais', sub:'Cartão de débito', descricao:'CARTAO ITAU', valor:538.68, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'21/01/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:11889, status:'Pago', centroCusto:'Comercial', projeto:'Magalu'},
-    {data:'21/01/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS  LILLY', valor:8075, status:'Pago', centroCusto:'Comercial', projeto:''},
-    {data:'21/01/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:11250, status:'Pago', centroCusto:'Comercial', projeto:'Magalu'},
-    {data:'21/01/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:2282.5, status:'Pago', centroCusto:'Comercial', projeto:'Bradesco'},
-    {data:'27/01/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:2811.37, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'05/02/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3281.81, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'10/02/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:94.68, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'05/02/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/02/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:15000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'09/02/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'19/02/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:300, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'09/02/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:172.62, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/02/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:310.64, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'03/02/2026', categoria:'Bancário', sub:'Tarifas, juros, multa', descricao:'TARIFAS DO BANCO', valor:22.36, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'06/02/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4408.21, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 83 GUILHERME MARTINS', valor:4840, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 204 WAGNER WHTE', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 203 WAGNER WHITE', valor:2600, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 03 ANDY MONTEIRO', valor:840, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 72 CAROLINA MOLINARI', valor:2400, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 360 POLICOMUNICAÇÃO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 204 ANTONIO BOSCO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 120 TIAGO BARBOSA', valor:960, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 219 ARTHUR LEITE', valor:4000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'GRUPO TIME', valor:2700, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'SURA SEGURO', valor:420.19, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 217 PRISCILA RODRIGUES', valor:14000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 727 STYLLUS GESTÃO', valor:4060, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 975 E 976 SANTO GRAAL PRODUÇÕES', valor:7200, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF PRID LOGISTCA', valor:1110, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF WHITE BALANCE', valor:7200, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Diretor de Fotografia', descricao:'NF 1099 RICARDO PELISSARI', valor:12000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 50 JAQUELINE ROCHA', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 8082 TESS MODEL', valor:17120, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 20 ARTHUR MEDEIROS', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 178 E 188 MIGUEL BEZERRA', valor:14000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 37 LUANA OLIVEIRA', valor:10300, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'NF 204 CINE E VIDEO ESTUDIO', valor:17000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 9230 AGUIA LOCAÇÃO', valor:9230, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 1543 SPECLIGHT LOCAÇÃO', valor:12000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 692 ARARA CRIATIVA', valor:5500, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 2382 TIAGO HERNANDES', valor:3600, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 189 MIGUEL BEZERRA', valor:7900, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 699 FERNANDA ARARA CRIATIVA', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Comissões', sub:'Comissão', descricao:'NF 65 ELISANGELA DIAS', valor:11238, status:'Pago', centroCusto:'Comercial', projeto:'Medley'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'verba de arte / figurino', descricao:'ARTE RC CONTEUDO', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'verba de arte / figurino', descricao:'VERBA FIGURINO', valor:5000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:4550, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/02/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'NF 112 NAKAMOTO LOCAÇÃO', valor:12720, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 46 SANDRO BORELI', valor:500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/02/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'NF 08 BELELEU RESTAURANTE', valor:3500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF 828 KCC ALIMENTAÇÃO', valor:5675, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'10/02/2026', categoria:'Taxas Ancine', sub:'Ancine + Taxas', descricao:'ANCINE', valor:4466.26, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'18/02/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1401.06, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/02/2026', categoria:'Imposto', sub:'Simples Nacional Tradicional', descricao:'SIMPLES NACIONAL', valor:18749.91, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'01/02/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:49680, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/02/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'ALEXANDRE VIANNA', valor:29114.74, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/02/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:5493.23, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'10/02/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:13709.53, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'05/03/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3280.35, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'13/03/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:104.51, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'05/03/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'24/03/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:12000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'09/03/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'13/03/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:400, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/03/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:613.52, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/03/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:310.64, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'06/03/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4452.16, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'02/03/2026', categoria:'Despesas Gerais', sub:'Diversos', descricao:'INARIMAR ELETRON. LUZ', valor:280.68, status:'Pago', centroCusto:'Produção', projeto:''},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 46 SANDRO BORELI', valor:410, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Locação', sub:'Transporte (van, combustível, uber, taxi)', descricao:'NF 32 DNS TRANSPORTES', valor:4448, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Transporte (van, combustível, uber, taxi)', descricao:'NF 524 VICTOR 3D TRANSPORTES', valor:3200, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Estúdios, Espaço particular ou público', descricao:'VERBA LOCAÇÃO', valor:2400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 37 LUANA RUCCI', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipamentos de vídeo', descricao:'FAT SPECLIGHT LOCAÇÃO', valor:14500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'SURA SEGURO', valor:234.09, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF BOM BOM', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF 828 KCC ALIMENTAÇÃO', valor:6486.75, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Finalização', descricao:'NF 108 CRONICAS VISUAIS', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:1749.96, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 222 MARIA RENI', valor:900, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Diretor de arte', descricao:'NF 201 YAGA PRODUÇÕES', valor:12000, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 65 MARIA LUIZA', valor:500, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Diretor de arte', descricao:'NF 200 YAGA PRODUÇÕES', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'13/03/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS LILLY', valor:4850, status:'Pago', centroCusto:'Comercial', projeto:''},
-    {data:'19/03/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1401.06, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/03/2026', categoria:'Imposto', sub:'Simples Nacional Tradicional', descricao:'SIMPLES NACIONAL', valor:72611.17, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'01/03/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:55000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'24/03/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'ALEXANDRE VIANNA', valor:11999.87, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/03/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:479.38, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'16/03/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:13225.52, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'06/04/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3381.27, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'09/04/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:89.8, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'06/04/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'23/04/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:12000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/04/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'10/04/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:400, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/04/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:172.62, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/04/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:1059.58, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'06/04/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4501.08, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF  83 THIAGO ROCHA', valor:1600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 146 PRODUÇÃO AUDIOVISUAL', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 306 LAFA MACIEL', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 19 CAROLINA SOLDADO', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 145 RONE VINICIUS', valor:5000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 190 MIGUEL BEZERRA', valor:14000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 842 RENATO MACHADO', valor:1980, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 10 TENKA SATO', valor:1545, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 154 GUARA FILMES', valor:920, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 1280 BARNETE JR', valor:1270, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 68 SAMUEL LUIZ', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 207 YURI BRITO', valor:1690, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 33 JULIA DA SILVA', valor:1560, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Cinegrafista', descricao:'NF 302 M R YOKODA', valor:5500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 714 JOELMO KINGS', valor:1265, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 132 DANIEL ARON', valor:1265, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 220 ARTHUR LEITE', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 215 BUFALOS ESPACIAIS', valor:6000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 88 CARLOS JOSE', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Edição', sub:'Editor de vídeo', descricao:'NF 02 PRISCILA REYS', valor:5000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 542 V PRODUER', valor:1300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 163 VALTER SEVERINO', valor:3101, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 144 E 145 ALLAN PRODUÇÃO', valor:3447, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 5599 DIRECTIVO', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 1272 FILMES DO BEM BETO PICASSO', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 708 709 ARARA CRIATIVA', valor:5900, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 487 LEITÃO FILMES', valor:2600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'FAT 7595 TRANSKINDER', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 176 ADERELL', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 121 BONZO CINEMA', valor:2470, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 218 PRISCILA RODRIGUES', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'REC 3696 NOVA ERA', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 108 E 109 REC VIDEO', valor:5450, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 09 MARINA ROSSI', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 43 ALLAN SILVA', valor:1545, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 90  GUILHERME BARRETO', valor:1620, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'FAT 9954 CASA DO PRODUTOR', valor:3503.8, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 15 JOÃO LUCA', valor:1300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 80 JULIANA FUTUOSO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 136 PATRICIA MONACO', valor:600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 59 ALESSANDRA CRISTINA', valor:650, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 241 EDMAR EVENTOS', valor:1433.45, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Diretor de Fotografia', descricao:'NF 31 ERNESTO ANDRADE', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 241 EDMAR EVENTOS - ISS', valor:56.41, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 116 PLOT RODUÇÕES', valor:6000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'verba de arte / figurino', descricao:'VERBA ARARA CRIATIVA', valor:6000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'verba de arte / figurino', descricao:'ARTE RC CONTEUDO', valor:12000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'COMP ENGENHARIA DE TRAFIGO', valor:540.78, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'DUBARRY', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'MIGUEL ANGELI BARBEARIA', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'NF ARTHA PARK', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF JEFF CATERING', valor:12500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'IBURACI FREITAS', valor:1100, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 101 AMANDA', valor:1545, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'NF 107 ADEMIR CAETANO', valor:2450, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 370 VIOLETA ESTUDIOS', valor:4880.95, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'COMP ENGENHARIA DE TRAFIGO', valor:259.26, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'EDIFICIO COPAN', valor:15000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 174 R P SERVIÇOS', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:2500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipamentos de vídeo', descricao:'MARCADO PAGO HD', valor:1103.47, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF 459 JEFF CATERING', valor:2500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Locação', sub:'Transporte (van, combustível, uber, taxi)', descricao:'NF 45 DNS TRANSPORTES', valor:18000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'CASA BAYARD REEMB CLIENTE', valor:869.99, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 5151 JOB TRANSPORTES', valor:833, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 39 LUANA RUCCHI', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 03 MARCELO MONTEIRO', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 715 ARARA CRIATIVA', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Acervo (objetos, roupas)', descricao:'UTIMURA ACERVO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Editor de vídeo', descricao:'NF 10 V GRANDE STUDIO', valor:1500, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:3828.6, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 20 CAROLINA SILVEIRA', valor:800, status:'Pago', centroCusto:'Produção', projeto:'Medley'},
-    {data:'02/04/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:12495.88, status:'Pago', centroCusto:'Comercial', projeto:'Magalu'},
-    {data:'01/04/2026', categoria:'Taxas Ancine', sub:'Ancine + Taxas', descricao:'ANCINE', valor:8932.52, status:'Pago', centroCusto:'Produção', projeto:''},
-    {data:'01/04/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1401.06, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/04/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'DARF L COELHO ADVOGADO', valor:1640.19, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/04/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:-1421.37, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/04/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'ISS - PIS - COFINS - IRPJ - CSLL', valor:23783.36, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'01/04/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:50000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'23/04/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'ALEXANDRE VIANNA', valor:11999.87, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'14/04/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:1938.99, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'15/04/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:4776, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'05/05/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3467.13, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/05/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:91.73, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'05/05/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'25/05/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:12000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/05/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'15/05/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:400, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/05/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:172.62, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/05/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:1377.37, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'05/05/2026', categoria:'Bancário', sub:'Tarifas, juros, multa', descricao:'TARIFAS DO BANCO', valor:16.35, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'06/05/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4550.07, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 5244 EMPRESA DE CINEMA', valor:570, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'FAT ATHENAS TINTAS', valor:1004.42, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'FAT ATHENAS TINTAS', valor:1250.73, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'FAT 7363 TRANSKINDER', valor:1400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipamentos de vídeo', descricao:'FAT 1757 SPECLIGHT', valor:19000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 03 ISABELA AMARAL', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 20 JOÃO LUCAS', valor:3250, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 21 CAROLINA SOLDADO', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 27 WENDELL BISPO', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Diretor de Fotografia', descricao:'NF 32 ERNESTO ANDRADE', valor:12000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 44 GIOVANA FRIAS', valor:1680, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 65 JULIANA FUTUOSO', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 132 BONZO CINEMA', valor:4300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 139 WALLES BARBOZA', valor:2500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 151 JEAN CARLOS', valor:650, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 152 ALLAN ROBERTO', valor:1680, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 164 MAGDA RIOS', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 220 PRISCILA RODRIGUES', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 220 YURI BRITO', valor:1440, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 224 WAGNER WILSON', valor:2300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 272 EDMAR BATISTA', valor:3858.93, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 310 LAFAYETE RIBEIRO', valor:2100, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 381 HEVERTON MIRABETE', valor:2400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 546 ROTA PARTICIPAÇÕES', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 593 CANTIDIO MARTINS', valor:2600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NFS 786 / 787 JAILSON SIQUEIRA', valor:2100, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 858 RENATO MACHADO', valor:5430, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 928 DENISE VOZZ', valor:300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 994 J A DA SILVA', valor:2400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 4354 AGUIA LOCAÇÃO', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'FAT 10163 CASA DO PRODUTOR', valor:14671, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 9604 MONDIALE PRODUÇÕES', valor:1300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipamentos de vídeo', descricao:'RECIBO 343 CAMERA', valor:14000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'SURA SEGURO', valor:198.1, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'TOKIO SEGURO', valor:3638.18, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipamentos de vídeo', descricao:'RECIBO 3720 NOVA ERA', valor:1100, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NFS   716 17 E 18 ARARA CRIATIVA', valor:11300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 16 ALEXANDRA SANTOS', valor:600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Diretor de arte', descricao:'NF 113 LUELI MARKS  SOARES', valor:5250, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 341 ISAAC NUNES', valor:2200, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 298 ROQUE MARQUES', valor:1400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 136 VFV PARTICIPAÇÕES', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 119 PLOT PRODUÇÕES', valor:2500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 5622 DIRECTIVO', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 223 ARTHUR LEITE', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 186 ANDERSON MACIEL', valor:1300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 172 VALTER SEVERINO', valor:4300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Cinegrafista', descricao:'NF 304 M R YOKODA', valor:11000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 17 LUCAS SOUZA', valor:2600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'NF 113 ADEMIR CAETANO', valor:4900, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Finalização', descricao:'NF 112 CRONICAS VISUAIS', valor:6000, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'NF 03 PRISCILA REYS', valor:7000, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 504 RENATO LEITÃO', valor:4320, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Ilustrador', descricao:'NF 11 PIATA ESTEVES', valor:3500, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Inteligencia Artificial', descricao:'NF 40 J ERICK MONCZKA', valor:8500, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 523 DOUGLAS PRODUÇÕES', valor:1100, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 21 C EDUARADO NASCIMENTO', valor:7500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 139 PATRICIA MONACO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 38 JULIANA MARTINS', valor:2880, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'ISS ADEMIR CAETANO', valor:202.14, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 90 TIAGO ROCHA', valor:3800, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 43 ALESSANDRA MARQUES', valor:650, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 54 BRUNA SANTOS', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 123 ISLANIA GUIMARAES', valor:400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Colorista', descricao:'NF 159 RONE VINICIUS', valor:7000, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 02 ANA PAULA LIS', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 16 FABIO SANTANA', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'05/05/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:12495.88, status:'Pago', centroCusto:'Comercial', projeto:'Netshoes'},
-    {data:'25/05/2026', categoria:'Taxas Ancine', sub:'Ancine + Taxas', descricao:'ANCINE', valor:4466.26, status:'Pago', centroCusto:'Produção', projeto:''},
-    {data:'11/05/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1314.89, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/05/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'ISS - PIS - COFINS - IRPJ - CSLL', valor:26409.62, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'01/05/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:50000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/05/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'ALEXANDRE VIANNA', valor:11999.87, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/05/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:2855.89, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/05/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:4677.97, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'19/05/2026', categoria:'Eventos', sub:'Brindes, festas', descricao:'BRINDES / EVENTOS', valor:2427.6, status:'Pago', centroCusto:'Comercial', projeto:''},
-    {data:'03/06/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3429.92, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'19/06/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:91.55, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'03/06/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'22/06/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:12000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/06/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'10/06/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:400, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/06/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:466.43, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'19/06/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:310.64, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/06/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4603.82, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'01/06/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'CILENE DEL', valor:5000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'01/06/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'CASA BNB', valor:6000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:1279.82, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 200 MIGUEL BEZERRA', valor:800, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'PAULO SERGIO', valor:500, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'ANA PAULA ANDRADE', valor:500, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 41 LUANA ROSALINI', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'01/06/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'NF 204 VICTORIA ZOLLI', valor:3000, status:'Pago', centroCusto:'Produção', projeto:''},
-    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Fillmakers, atores', descricao:'O CIRCO FANTASTICO', valor:3600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes'},
-    {data:'01/06/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS LILLY', valor:1250, status:'Pago', centroCusto:'Comercial', projeto:''},
-    {data:'01/06/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:6310, status:'Pago', centroCusto:'Comercial', projeto:'Netshoes'},
-    {data:'10/06/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1314.89, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/06/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'ISS - PIS - COFINS - IRPJ - CSLL', valor:19879.25, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'01/06/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:200000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'15/06/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'ALEXANDRE VIANNA', valor:11999.87, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'22/06/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:3045.42, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'15/06/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:3240.94, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/01/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:561.36, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/02/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:599.47, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'10/02/2026', categoria:'Serv terceirizados', sub:'Manutenção', descricao:'ALUMIL TELAS', valor:997.45, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'04/03/2026', categoria:'Serv terceirizados', sub:'Manutenção', descricao:'ALUMIL TELAS', valor:997.45, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/03/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:834.47, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'14/04/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:1512, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/05/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:1512, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'22/06/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:1512, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'01/07/2026', categoria:'Fornecedores', sub:'Colorista', descricao:'RONE VINICIUS', valor:2000, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/07/2026', categoria:'Fornecedores', sub:'Editor de vídeo', descricao:'PRISCILA REYS', valor:1500, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes'},
-    {data:'01/07/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:50000, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'02/07/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'JU E VI EVENTOS', valor:4300, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'02/07/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 201 MIGUEL BEZERRA', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'03/07/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'06/07/2026', categoria:'Despesas Gerais', sub:'Diarista + Estagiários', descricao:'ANA PAULA  DIARISTA', valor:400, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'06/07/2026', categoria:'Serv terceirizados', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3430.33, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'06/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'TULIO CERQUIZE', valor:1500, status:'Pago', centroCusto:'Produção', projeto:''},
-    {data:'06/07/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4652.76, status:'Pago', centroCusto:'Financeiro', projeto:''},
-    {data:'08/07/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:172.62, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/07/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'TEF TAXA PREFEITURA', valor:236.35, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/07/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'TEF TAXA PREFEITURA -ABRIL 26', valor:288.15, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/07/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'ISS  FATURAMENTO', valor:600, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/07/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1314.89, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/07/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'08/07/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'BRUNO PARAISO PRODUÇÃO', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Magalu'},
-    {data:'13/07/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'VICTORIA ZOLLI', valor:3000, status:'Pago', centroCusto:'Produção', projeto:''},
-    {data:'15/07/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:30422.98, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'CASA DO PRODUTOR', valor:325.39, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'DARIO NEGRITUDE', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'TARCISIO RAFAEL', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'RAMOILE BARREIROS', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'STOOR AGENCIA', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'PLOT PRODUÇÕES', valor:4000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'ANTONIO FABIANA PFIER', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar'},
-    {data:'15/07/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'DARF L COELHO ADVOGADO', valor:103.9, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'15/07/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'DARF L COELHO ADVOGADO', valor:93.94, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'17/07/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:1460.2, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'17/07/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:875.44, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'17/07/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:93.33, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'17/07/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:1750, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'17/07/2026', categoria:'Equipe técnica', sub:'Editor de vídeo', descricao:'NF 05 PRISCILA REYS', valor:5000, status:'Pago', centroCusto:'Pós produção', projeto:'Quinto Andar'},
-    {data:'17/07/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:2689.38, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'20/07/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'DARF L COELHO ADVOGADO', valor:86.17, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'21/07/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'PIS COFINS', valor:1825, status:'Pago', centroCusto:'Administrativo', projeto:''},
-    {data:'21/07/2026', categoria:'Comissões', sub:'Comissão', descricao:'NF 78 ELISANGELA DIAS', valor:2250, status:'Pago', centroCusto:'Comercial', projeto:'Netshoes'},
-    {data:'21/07/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'NF 117 ADEMIR CAETANO', valor:2000, status:'Pago', centroCusto:'Pós produção', projeto:'Quinto Andar'},
-    {data:'21/07/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'NF 77 ELISANGELA DIAS', valor:12000, status:'Pago', centroCusto:'Administrativo', projeto:''},
+    // Data, Categoria, Subcategoria, Descricao, Valor, Status, CentroCusto, ProjetoVinc, Vencimento
+    {data:'31/12/2025', categoria:'Despesas Gerais', sub:'Diversas (compras mercado, cafés)', descricao:'Total de despesas de 2025 (consolidado)', valor:1697500, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'05/01/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:2754.62, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'05/01/2026'},
+    {data:'12/01/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:192.37, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'12/01/2026'},
+    {data:'05/01/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:2300, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'05/01/2026'},
+    {data:'21/01/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:24000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'21/01/2026'},
+    {data:'08/01/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/01/2026'},
+    {data:'27/01/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:300, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'27/01/2026'},
+    {data:'08/01/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:172.62, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/01/2026'},
+    {data:'20/01/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:310.64, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/01/2026'},
+    {data:'06/01/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4352.68, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:'06/01/2026'},
+    {data:'01/01/2026', categoria:'Fornecedores', sub:'Hospedagem, transporte, cursos', descricao:'NF 334 HERNANE TRANSPORTE', valor:280, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'NF 505 EM CURTO', valor:8500, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'07/01/2026'},
+    {data:'01/01/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'NF 29 E NF 30 LUANA ROSALINI', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'07/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Colorista', descricao:'NF 128 DRIFT COLOR', valor:8500, status:'Pago', centroCusto:'Pós produção', projeto:'Magalu', vencimento:'07/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 687 ARARA CRIATIVA', valor:500, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 70 CASSIA FRANCISCA', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 186 MIGUEL BEZERRA', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 586 CANTIDIO MARTINS', valor:2600, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 81 LUCAS RAMOS', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'FAT 9654 CASA DO PRODUTOR', valor:2853.8, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 581 NF 583 CENOTECNICO', valor:3118.45, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 133 MARCIO JOSE', valor:2860, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 82 JOSE CARLOS', valor:1600, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 437 CARLOS JOSE', valor:1110, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 686 ARARA CRIATIVA', valor:6500, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 75 WINIE DOMINIQUE', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 5576 DIRECTIVO', valor:800, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 310 CF FILMES', valor:960, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 78 RODRIGO MESQUITA', valor:1110, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 101 CINE E CAMERA', valor:960, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 31 LUANA ROSALINI', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 3053 CIA DO TP', valor:1900, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 74 ANTONIO CARLOS LEMOS', valor:2640, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 307 CF FILMES', valor:1800, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Diretor', descricao:'NF 216 PRISCILA RODRIGUES', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 136 ALLAN AUDIO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'FAT 90 TAU DIGITAL', valor:11650, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 68 DIEGO GONZALES', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 153 VS LIMA', valor:1800, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 16 CAROLINA SOLDADO', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 717 PITORA ARTES', valor:2500, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 274 LUCAS AYAUHA', valor:5000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 47 EDVALDO APARECIDO', valor:2940, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF MICHAEL RODRIGUES', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 1490 SPECLIGHT', valor:11500, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 1489 SPECLIGHT', valor:21125, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Diretor de Fotografia', descricao:'NF 1095 R P FILMES', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'16/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 110 THALYTA CRISTINA', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'16/01/2026'},
+    {data:'01/01/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 2715 CINEGRIP LOCAÇÃO', valor:3602, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'16/01/2026'},
+    {data:'01/01/2026', categoria:'Edição', sub:'Editor de vídeo', descricao:'NF 01 PRISCILA REYS THIAGO', valor:5000, status:'Pago', centroCusto:'Pós produção', projeto:'Magalu', vencimento:'16/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 206 BUFALOS ESPACIAIS', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'16/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 396 WBS FILMES', valor:960, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'16/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 584 GBS BARRETO', valor:2900, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'19/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 309 RAFAELA ROSA', valor:2640, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'23/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 384 WBS FILMES', valor:1100, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'30/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 699 FERNANDA ARARA CRIATIVA', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'09/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'BRUNO CARVALHO', valor:2800, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'09/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'LUCAS RAMOS', valor:45000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'09/01/2026'},
+    {data:'01/01/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'LUCIANO DECOURT', valor:19000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'12/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF 1059 HES CATERING', valor:8514, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'13/01/2026'},
+    {data:'01/01/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'COMP ENGENHARIA DE TRAFIGO', valor:248.62, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'13/01/2026'},
+    {data:'01/01/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'SPCINE', valor:285, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'21/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Hospedagem, transporte, cursos', descricao:'NF 3861 CINE VAN', valor:13500, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'21/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF 1058 HES CATERING', valor:14031, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'21/01/2026'},
+    {data:'01/01/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'LUCIANO DECOURT', valor:1250, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'23/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'THAIS AGUIAR', valor:6291.23, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'27/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 73102 COMPULASER GRAFICA', valor:1580, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'28/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'YAGA', valor:1767.19, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'28/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 425 ESTUDIO MDS', valor:2130, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'30/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 1254 F R A REPRESENTAÇÃO', valor:930, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'30/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:912.4, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'30/01/2026'},
+    {data:'01/01/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'LUCIANO DECOURT', valor:1270, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'30/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'DIEGO GONZALES', valor:441.83, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'30/01/2026'},
+    {data:'01/01/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'ADEMIR CAETANO  LILLY', valor:1400, status:'Pago', centroCusto:'Pós produção', projeto:'', vencimento:''},
+    {data:'20/01/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1401.06, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/01/2026'},
+    {data:'16/01/2026', categoria:'Imposto', sub:'Simples Nacional Tradicional', descricao:'SIMPLES NACIONAL', valor:86796.07, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:'16/01/2026'},
+    {data:'15/01/2026', categoria:'Despesas Gerais', sub:'Cartão de débito', descricao:'CARTAO ITAU', valor:538.68, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'15/01/2026'},
+    {data:'21/01/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:11889, status:'Pago', centroCusto:'Comercial', projeto:'Magalu', vencimento:'21/01/2026'},
+    {data:'21/01/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS  LILLY', valor:8075, status:'Pago', centroCusto:'Comercial', projeto:'', vencimento:'21/01/2026'},
+    {data:'21/01/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:11250, status:'Pago', centroCusto:'Comercial', projeto:'Magalu', vencimento:'21/01/2026'},
+    {data:'21/01/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:2282.5, status:'Pago', centroCusto:'Comercial', projeto:'Bradesco', vencimento:'21/01/2026'},
+    {data:'27/01/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:2811.37, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'05/02/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3281.81, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'05/02/2026'},
+    {data:'10/02/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:94.68, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'10/02/2026'},
+    {data:'05/02/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'05/02/2026'},
+    {data:'01/02/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:15000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'01/02/2026'},
+    {data:'09/02/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'09/02/2026'},
+    {data:'19/02/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:300, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'19/02/2026'},
+    {data:'09/02/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:172.62, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'09/02/2026'},
+    {data:'20/02/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:310.64, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/02/2026'},
+    {data:'03/02/2026', categoria:'Bancário', sub:'Tarifas, juros, multa', descricao:'TARIFAS DO BANCO', valor:22.36, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:'03/02/2026'},
+    {data:'06/02/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4408.21, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:'06/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 83 GUILHERME MARTINS', valor:4840, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'05/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 204 WAGNER WHTE', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'05/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 203 WAGNER WHITE', valor:2600, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'05/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 03 ANDY MONTEIRO', valor:840, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'10/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 72 CAROLINA MOLINARI', valor:2400, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 360 POLICOMUNICAÇÃO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 204 ANTONIO BOSCO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 120 TIAGO BARBOSA', valor:960, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'12/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 219 ARTHUR LEITE', valor:4000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'19/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'GRUPO TIME', valor:2700, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'06/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'SURA SEGURO', valor:420.19, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'10/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 217 PRISCILA RODRIGUES', valor:14000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 727 STYLLUS GESTÃO', valor:4060, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 975 E 976 SANTO GRAAL PRODUÇÕES', valor:7200, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF PRID LOGISTCA', valor:1110, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF WHITE BALANCE', valor:7200, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Diretor de Fotografia', descricao:'NF 1099 RICARDO PELISSARI', valor:12000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 50 JAQUELINE ROCHA', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 8082 TESS MODEL', valor:17120, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 20 ARTHUR MEDEIROS', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 178 E 188 MIGUEL BEZERRA', valor:14000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 37 LUANA OLIVEIRA', valor:10300, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'NF 204 CINE E VIDEO ESTUDIO', valor:17000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 9230 AGUIA LOCAÇÃO', valor:9230, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 1543 SPECLIGHT LOCAÇÃO', valor:12000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 692 ARARA CRIATIVA', valor:5500, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 2382 TIAGO HERNANDES', valor:3600, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 189 MIGUEL BEZERRA', valor:7900, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 699 FERNANDA ARARA CRIATIVA', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Comissões', sub:'Comissão', descricao:'NF 65 ELISANGELA DIAS', valor:11238, status:'Pago', centroCusto:'Comercial', projeto:'Medley', vencimento:'19/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'25/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'verba de arte / figurino', descricao:'ARTE RC CONTEUDO', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'25/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'verba de arte / figurino', descricao:'VERBA FIGURINO', valor:5000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'25/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:4550, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'26/02/2026'},
+    {data:'01/02/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'NF 112 NAKAMOTO LOCAÇÃO', valor:12720, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'26/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 46 SANDRO BORELI', valor:500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'26/02/2026'},
+    {data:'01/02/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'NF 08 BELELEU RESTAURANTE', valor:3500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'26/02/2026'},
+    {data:'01/02/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF 828 KCC ALIMENTAÇÃO', valor:5675, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'26/02/2026'},
+    {data:'10/02/2026', categoria:'Taxas Ancine', sub:'Ancine + Taxas', descricao:'ANCINE', valor:4466.26, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'10/02/2026'},
+    {data:'18/02/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1401.06, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'18/02/2026'},
+    {data:'01/02/2026', categoria:'Imposto', sub:'Simples Nacional Tradicional', descricao:'SIMPLES NACIONAL', valor:18749.91, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:''},
+    {data:'01/02/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:49680, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'01/02/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'ALEXANDRE VIANNA', valor:29114.74, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/02/2026'},
+    {data:'01/02/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:5493.23, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'10/02/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:13709.53, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'10/02/2026'},
+    {data:'05/03/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3280.35, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'05/03/2026'},
+    {data:'13/03/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:104.51, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'13/03/2026'},
+    {data:'05/03/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'05/03/2026'},
+    {data:'24/03/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:12000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'24/03/2026'},
+    {data:'09/03/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'09/03/2026'},
+    {data:'13/03/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:400, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'13/03/2026'},
+    {data:'01/03/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:613.52, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'20/03/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:310.64, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/03/2026'},
+    {data:'06/03/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4452.16, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:'06/03/2026'},
+    {data:'02/03/2026', categoria:'Despesas Gerais', sub:'Diversos', descricao:'INARIMAR ELETRON. LUZ', valor:280.68, status:'Pago', centroCusto:'Produção', projeto:'', vencimento:'02/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 46 SANDRO BORELI', valor:410, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'03/03/2026'},
+    {data:'01/03/2026', categoria:'Locação', sub:'Transporte (van, combustível, uber, taxi)', descricao:'NF 32 DNS TRANSPORTES', valor:4448, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'03/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Transporte (van, combustível, uber, taxi)', descricao:'NF 524 VICTOR 3D TRANSPORTES', valor:3200, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'03/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Estúdios, Espaço particular ou público', descricao:'VERBA LOCAÇÃO', valor:2400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'05/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 37 LUANA RUCCI', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'05/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipamentos de vídeo', descricao:'FAT SPECLIGHT LOCAÇÃO', valor:14500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'05/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'SURA SEGURO', valor:234.09, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'05/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF BOM BOM', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'10/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF 828 KCC ALIMENTAÇÃO', valor:6486.75, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'10/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Finalização', descricao:'NF 108 CRONICAS VISUAIS', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'10/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:1749.96, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'13/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 222 MARIA RENI', valor:900, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'03/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Diretor de arte', descricao:'NF 201 YAGA PRODUÇÕES', valor:12000, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'13/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 65 MARIA LUIZA', valor:500, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'09/03/2026'},
+    {data:'01/03/2026', categoria:'Equipe técnica', sub:'Diretor de arte', descricao:'NF 200 YAGA PRODUÇÕES', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'13/03/2026'},
+    {data:'13/03/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS LILLY', valor:4850, status:'Pago', centroCusto:'Comercial', projeto:'', vencimento:'13/03/2026'},
+    {data:'19/03/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1401.06, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'19/03/2026'},
+    {data:'01/03/2026', categoria:'Imposto', sub:'Simples Nacional Tradicional', descricao:'SIMPLES NACIONAL', valor:72611.17, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:''},
+    {data:'01/03/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:55000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'24/03/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'ALEXANDRE VIANNA', valor:11999.87, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'24/03/2026'},
+    {data:'20/03/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:479.38, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/03/2026'},
+    {data:'16/03/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:13225.52, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'16/03/2026'},
+    {data:'06/04/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3381.27, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'06/04/2026'},
+    {data:'09/04/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:89.8, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'09/04/2026'},
+    {data:'06/04/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'06/04/2026'},
+    {data:'23/04/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:12000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'23/04/2026'},
+    {data:'08/04/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/04/2026'},
+    {data:'10/04/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:400, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'10/04/2026'},
+    {data:'08/04/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:172.62, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/04/2026'},
+    {data:'20/04/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:1059.58, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/04/2026'},
+    {data:'06/04/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4501.08, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:'06/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF  83 THIAGO ROCHA', valor:1600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 146 PRODUÇÃO AUDIOVISUAL', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 306 LAFA MACIEL', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 19 CAROLINA SOLDADO', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 145 RONE VINICIUS', valor:5000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 190 MIGUEL BEZERRA', valor:14000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 842 RENATO MACHADO', valor:1980, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 10 TENKA SATO', valor:1545, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 154 GUARA FILMES', valor:920, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 1280 BARNETE JR', valor:1270, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 68 SAMUEL LUIZ', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 207 YURI BRITO', valor:1690, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 33 JULIA DA SILVA', valor:1560, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Cinegrafista', descricao:'NF 302 M R YOKODA', valor:5500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 714 JOELMO KINGS', valor:1265, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 132 DANIEL ARON', valor:1265, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 220 ARTHUR LEITE', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 215 BUFALOS ESPACIAIS', valor:6000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 88 CARLOS JOSE', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Edição', sub:'Editor de vídeo', descricao:'NF 02 PRISCILA REYS', valor:5000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 542 V PRODUER', valor:1300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 163 VALTER SEVERINO', valor:3101, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 144 E 145 ALLAN PRODUÇÃO', valor:3447, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 5599 DIRECTIVO', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Locação', sub:'Equipamentos de vídeo', descricao:'FAT 1272 FILMES DO BEM BETO PICASSO', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 708 709 ARARA CRIATIVA', valor:5900, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 487 LEITÃO FILMES', valor:2600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'FAT 7595 TRANSKINDER', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 176 ADERELL', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 121 BONZO CINEMA', valor:2470, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 218 PRISCILA RODRIGUES', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'REC 3696 NOVA ERA', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 108 E 109 REC VIDEO', valor:5450, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 09 MARINA ROSSI', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 43 ALLAN SILVA', valor:1545, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 90  GUILHERME BARRETO', valor:1620, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'FAT 9954 CASA DO PRODUTOR', valor:3503.8, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 15 JOÃO LUCA', valor:1300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 80 JULIANA FUTUOSO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 136 PATRICIA MONACO', valor:600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 59 ALESSANDRA CRISTINA', valor:650, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 241 EDMAR EVENTOS', valor:1433.45, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Diretor de Fotografia', descricao:'NF 31 ERNESTO ANDRADE', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 241 EDMAR EVENTOS - ISS', valor:56.41, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 116 PLOT RODUÇÕES', valor:6000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'verba de arte / figurino', descricao:'VERBA ARARA CRIATIVA', valor:6000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'verba de arte / figurino', descricao:'ARTE RC CONTEUDO', valor:12000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'COMP ENGENHARIA DE TRAFIGO', valor:540.78, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'DUBARRY', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'MIGUEL ANGELI BARBEARIA', valor:10000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'NF ARTHA PARK', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF JEFF CATERING', valor:12500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'IBURACI FREITAS', valor:1100, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 101 AMANDA', valor:1545, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'09/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'NF 107 ADEMIR CAETANO', valor:2450, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'09/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 370 VIOLETA ESTUDIOS', valor:4880.95, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'09/04/2026'},
+    {data:'01/04/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'COMP ENGENHARIA DE TRAFIGO', valor:259.26, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'EDIFICIO COPAN', valor:15000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'10/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 174 R P SERVIÇOS', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'10/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:2500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'10/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipamentos de vídeo', descricao:'MARCADO PAGO HD', valor:1103.47, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'10/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'NF 459 JEFF CATERING', valor:2500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'10/04/2026'},
+    {data:'01/04/2026', categoria:'Locação', sub:'Transporte (van, combustível, uber, taxi)', descricao:'NF 45 DNS TRANSPORTES', valor:18000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'CASA BAYARD REEMB CLIENTE', valor:869.99, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 5151 JOB TRANSPORTES', valor:833, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 39 LUANA RUCCHI', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 03 MARCELO MONTEIRO', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NF 715 ARARA CRIATIVA', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Acervo (objetos, roupas)', descricao:'UTIMURA ACERVO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'27/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Editor de vídeo', descricao:'NF 10 V GRANDE STUDIO', valor:1500, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'27/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:3828.6, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'27/04/2026'},
+    {data:'01/04/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 20 CAROLINA SILVEIRA', valor:800, status:'Pago', centroCusto:'Produção', projeto:'Medley', vencimento:'16/04/2026'},
+    {data:'02/04/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:12495.88, status:'Pago', centroCusto:'Comercial', projeto:'Magalu', vencimento:'02/04/2026'},
+    {data:'01/04/2026', categoria:'Taxas Ancine', sub:'Ancine + Taxas', descricao:'ANCINE', valor:8932.52, status:'Pago', centroCusto:'Produção', projeto:'', vencimento:''},
+    {data:'01/04/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1401.06, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'01/04/2026'},
+    {data:'01/04/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'DARF L COELHO ADVOGADO', valor:1640.19, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'30/04/2026'},
+    {data:'01/04/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:-1421.37, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'01/04/2026'},
+    {data:'01/04/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'ISS - PIS - COFINS - IRPJ - CSLL', valor:23783.36, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:''},
+    {data:'01/04/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:50000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'23/04/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'ALEXANDRE VIANNA', valor:11999.87, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'23/04/2026'},
+    {data:'14/04/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:1938.99, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'14/04/2026'},
+    {data:'15/04/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:4776, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'15/04/2026'},
+    {data:'05/05/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3467.13, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'05/05/2026'},
+    {data:'20/05/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:91.73, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/05/2026'},
+    {data:'05/05/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'05/05/2026'},
+    {data:'25/05/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:12000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'25/05/2026'},
+    {data:'08/05/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/05/2026'},
+    {data:'15/05/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:400, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'15/05/2026'},
+    {data:'08/05/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:172.62, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/05/2026'},
+    {data:'20/05/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:1377.37, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/05/2026'},
+    {data:'05/05/2026', categoria:'Bancário', sub:'Tarifas, juros, multa', descricao:'TARIFAS DO BANCO', valor:16.35, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:'05/05/2026'},
+    {data:'06/05/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4550.07, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:'06/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 5244 EMPRESA DE CINEMA', valor:570, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'04/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'FAT ATHENAS TINTAS', valor:1004.42, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'05/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'FAT ATHENAS TINTAS', valor:1250.73, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'05/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'FAT 7363 TRANSKINDER', valor:1400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'05/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipamentos de vídeo', descricao:'FAT 1757 SPECLIGHT', valor:19000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'05/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 03 ISABELA AMARAL', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 20 JOÃO LUCAS', valor:3250, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 21 CAROLINA SOLDADO', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 27 WENDELL BISPO', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Diretor de Fotografia', descricao:'NF 32 ERNESTO ANDRADE', valor:12000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 44 GIOVANA FRIAS', valor:1680, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 65 JULIANA FUTUOSO', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 132 BONZO CINEMA', valor:4300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 139 WALLES BARBOZA', valor:2500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 151 JEAN CARLOS', valor:650, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 152 ALLAN ROBERTO', valor:1680, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 164 MAGDA RIOS', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 220 PRISCILA RODRIGUES', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 220 YURI BRITO', valor:1440, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 224 WAGNER WILSON', valor:2300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 272 EDMAR BATISTA', valor:3858.93, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 310 LAFAYETE RIBEIRO', valor:2100, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 381 HEVERTON MIRABETE', valor:2400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 546 ROTA PARTICIPAÇÕES', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 593 CANTIDIO MARTINS', valor:2600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NFS 786 / 787 JAILSON SIQUEIRA', valor:2100, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 858 RENATO MACHADO', valor:5430, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 928 DENISE VOZZ', valor:300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 994 J A DA SILVA', valor:2400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 4354 AGUIA LOCAÇÃO', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'FAT 10163 CASA DO PRODUTOR', valor:14671, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 9604 MONDIALE PRODUÇÕES', valor:1300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipamentos de vídeo', descricao:'RECIBO 343 CAMERA', valor:14000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'SURA SEGURO', valor:198.1, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'TOKIO SEGURO', valor:3638.18, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipamentos de vídeo', descricao:'RECIBO 3720 NOVA ERA', valor:1100, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Cenários, figurinos, obj de cena, produção', descricao:'NFS   716 17 E 18 ARARA CRIATIVA', valor:11300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 16 ALEXANDRA SANTOS', valor:600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Diretor de arte', descricao:'NF 113 LUELI MARKS  SOARES', valor:5250, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 341 ISAAC NUNES', valor:2200, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 298 ROQUE MARQUES', valor:1400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 136 VFV PARTICIPAÇÕES', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 119 PLOT PRODUÇÕES', valor:2500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 5622 DIRECTIVO', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 223 ARTHUR LEITE', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 186 ANDERSON MACIEL', valor:1300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 172 VALTER SEVERINO', valor:4300, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Cinegrafista', descricao:'NF 304 M R YOKODA', valor:11000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 17 LUCAS SOUZA', valor:2600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'NF 113 ADEMIR CAETANO', valor:4900, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Finalização', descricao:'NF 112 CRONICAS VISUAIS', valor:6000, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'NF 03 PRISCILA REYS', valor:7000, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 504 RENATO LEITÃO', valor:4320, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Ilustrador', descricao:'NF 11 PIATA ESTEVES', valor:3500, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Inteligencia Artificial', descricao:'NF 40 J ERICK MONCZKA', valor:8500, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 523 DOUGLAS PRODUÇÕES', valor:1100, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 21 C EDUARADO NASCIMENTO', valor:7500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 139 PATRICIA MONACO', valor:1200, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 38 JULIANA MARTINS', valor:2880, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'ISS ADEMIR CAETANO', valor:202.14, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 90 TIAGO ROCHA', valor:3800, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 43 ALESSANDRA MARQUES', valor:650, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 54 BRUNA SANTOS', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 123 ISLANIA GUIMARAES', valor:400, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Colorista', descricao:'NF 159 RONE VINICIUS', valor:7000, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 02 ANA PAULA LIS', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 16 FABIO SANTANA', valor:700, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'11/05/2026'},
+    {data:'05/05/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:12495.88, status:'Pago', centroCusto:'Comercial', projeto:'Netshoes', vencimento:'05/05/2026'},
+    {data:'25/05/2026', categoria:'Taxas Ancine', sub:'Ancine + Taxas', descricao:'ANCINE', valor:4466.26, status:'Pago', centroCusto:'Produção', projeto:'', vencimento:'25/05/2026'},
+    {data:'11/05/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1314.89, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'11/05/2026'},
+    {data:'01/05/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'ISS - PIS - COFINS - IRPJ - CSLL', valor:26409.62, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:''},
+    {data:'01/05/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:50000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'20/05/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'ALEXANDRE VIANNA', valor:11999.87, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/05/2026'},
+    {data:'20/05/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:2855.89, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/05/2026'},
+    {data:'01/05/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:4677.97, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'19/05/2026', categoria:'Eventos', sub:'Brindes, festas', descricao:'BRINDES / EVENTOS', valor:2427.6, status:'Pago', centroCusto:'Comercial', projeto:'', vencimento:'19/05/2026'},
+    {data:'03/06/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3429.92, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'03/06/2026'},
+    {data:'19/06/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:91.55, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'19/06/2026'},
+    {data:'03/06/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'03/06/2026'},
+    {data:'22/06/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:12000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'22/06/2026'},
+    {data:'08/06/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/06/2026'},
+    {data:'10/06/2026', categoria:'Pessoal', sub:'Diarista + Estagiários', descricao:'FAXINA', valor:400, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'10/06/2026'},
+    {data:'01/06/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:466.43, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'19/06/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:310.64, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'19/06/2026'},
+    {data:'08/06/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4603.82, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:'08/06/2026'},
+    {data:'01/06/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'CILENE DEL', valor:5000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'15/06/2026'},
+    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:1000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'15/06/2026'},
+    {data:'01/06/2026', categoria:'Locação', sub:'Estúdios, Espaço particular ou público', descricao:'CASA BNB', valor:6000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'15/06/2026'},
+    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Verba de produção', descricao:'MIGUEL BEZERRA', valor:1279.82, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'19/06/2026'},
+    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 200 MIGUEL BEZERRA', valor:800, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'19/06/2026'},
+    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'PAULO SERGIO', valor:500, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'23/06/2026'},
+    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'ANA PAULA ANDRADE', valor:500, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'23/06/2026'},
+    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'NF 41 LUANA ROSALINI', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'24/06/2026'},
+    {data:'01/06/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'NF 204 VICTORIA ZOLLI', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'', vencimento:'22/06/2026'},
+    {data:'01/06/2026', categoria:'Equipe técnica', sub:'Fillmakers, atores', descricao:'O CIRCO FANTASTICO', valor:3600, status:'Pago', centroCusto:'Produção', projeto:'Netshoes', vencimento:'01/06/2026'},
+    {data:'01/06/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS LILLY', valor:1250, status:'Pago', centroCusto:'Comercial', projeto:'', vencimento:'01/06/2026'},
+    {data:'01/06/2026', categoria:'Comissões', sub:'Comissão', descricao:'ELISANGELA DIAS', valor:6310, status:'Pago', centroCusto:'Comercial', projeto:'Netshoes', vencimento:''},
+    {data:'10/06/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1314.89, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'10/06/2026'},
+    {data:'01/06/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'ISS - PIS - COFINS - IRPJ - CSLL', valor:19879.25, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:''},
+    {data:'01/06/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:200000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:''},
+    {data:'15/06/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'ALEXANDRE VIANNA', valor:11999.87, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'15/06/2026'},
+    {data:'22/06/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:3045.42, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'22/06/2026'},
+    {data:'15/06/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:3240.94, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'15/06/2026'},
+    {data:'20/01/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:561.36, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/01/2026'},
+    {data:'20/02/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:599.47, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/02/2026'},
+    {data:'10/02/2026', categoria:'Serv terceirizados', sub:'Manutenção', descricao:'ALUMIL TELAS', valor:997.45, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'10/02/2026'},
+    {data:'04/03/2026', categoria:'Serv terceirizados', sub:'Manutenção', descricao:'ALUMIL TELAS', valor:997.45, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'04/03/2026'},
+    {data:'20/03/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:834.47, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/03/2026'},
+    {data:'14/04/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:1512, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'14/04/2026'},
+    {data:'20/05/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:1512, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/05/2026'},
+    {data:'22/06/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:1512, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'22/06/2026'},
+    {data:'01/07/2026', categoria:'Fornecedores', sub:'Colorista', descricao:'RONE VINICIUS', valor:2000, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'01/07/2026'},
+    {data:'01/07/2026', categoria:'Fornecedores', sub:'Editor de vídeo', descricao:'PRISCILA REYS', valor:1500, status:'Pago', centroCusto:'Pós produção', projeto:'Netshoes', vencimento:'01/07/2026'},
+    {data:'01/07/2026', categoria:'Pessoal', sub:'Sócio (Dividendos + Pro labore)', descricao:'RODRIGO ZANCHINI', valor:50000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'01/07/2026'},
+    {data:'02/07/2026', categoria:'Equipe técnica', sub:'Catering', descricao:'JU E VI EVENTOS', valor:4300, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'02/07/2026'},
+    {data:'02/07/2026', categoria:'Equipe técnica', sub:'Produtor', descricao:'NF 201 MIGUEL BEZERRA', valor:7000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'02/07/2026'},
+    {data:'03/07/2026', categoria:'Pessoal', sub:'Financeiro Administrativo', descricao:'MONICA GAIBINA', valor:3600, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'03/07/2026'},
+    {data:'06/07/2026', categoria:'Despesas Gerais', sub:'Diarista + Estagiários', descricao:'ANA PAULA  DIARISTA', valor:400, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'06/07/2026'},
+    {data:'06/07/2026', categoria:'Serv terceirizados', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'BAETA IMOBILIARIA', valor:3430.33, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'06/07/2026'},
+    {data:'06/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'TULIO CERQUIZE', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'', vencimento:'06/07/2026'},
+    {data:'06/07/2026', categoria:'Empréstimo', sub:'Pronampe e outros', descricao:'PRONAMP', valor:4652.76, status:'Pago', centroCusto:'Financeiro', projeto:'', vencimento:'06/07/2026'},
+    {data:'08/07/2026', categoria:'Despesas Gerais', sub:'Aluguel, Iptu, estacionamento, seguro', descricao:'SEGUROS', valor:172.62, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/07/2026'},
+    {data:'08/07/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'TEF TAXA PREFEITURA', valor:236.35, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/07/2026'},
+    {data:'08/07/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'TEF TAXA PREFEITURA -ABRIL 26', valor:288.15, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/07/2026'},
+    {data:'08/07/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'ISS  FATURAMENTO', valor:600, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/07/2026'},
+    {data:'08/07/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'ADVOGADO JOB QSAUDE', valor:1314.89, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/07/2026'},
+    {data:'08/07/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'VIVO', valor:133.79, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'08/07/2026'},
+    {data:'08/07/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'BRUNO PARAISO PRODUÇÃO', valor:1500, status:'Pago', centroCusto:'Produção', projeto:'Magalu', vencimento:'08/07/2026'},
+    {data:'13/07/2026', categoria:'Fornecedores', sub:'Equipe geral', descricao:'VICTORIA ZOLLI', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'', vencimento:'13/07/2026'},
+    {data:'15/07/2026', categoria:'Despesas Gerais', sub:'Cartão de crédito', descricao:'CARTAO ITAU', valor:30422.98, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'15/07/2026'},
+    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'CASA DO PRODUTOR', valor:325.39, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'15/07/2026'},
+    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'DARIO NEGRITUDE', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'15/07/2026'},
+    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'TARCISIO RAFAEL', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'15/07/2026'},
+    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'RAMOILE BARREIROS', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'15/07/2026'},
+    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'STOOR AGENCIA', valor:3000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'15/07/2026'},
+    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'PLOT PRODUÇÕES', valor:4000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'15/07/2026'},
+    {data:'15/07/2026', categoria:'Equipe técnica', sub:'Equipe geral', descricao:'ANTONIO FABIANA PFIER', valor:2000, status:'Pago', centroCusto:'Produção', projeto:'Quinto Andar', vencimento:'15/07/2026'},
+    {data:'15/07/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'DARF L COELHO ADVOGADO', valor:103.9, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'15/07/2026'},
+    {data:'15/07/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'DARF L COELHO ADVOGADO', valor:93.94, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'15/07/2026'},
+    {data:'17/07/2026', categoria:'Serv terceirizados', sub:'Contabilidade', descricao:'CONTHABIZ CONTABILIDADE', valor:1460.2, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'17/07/2026'},
+    {data:'17/07/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'GPS', valor:875.44, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'17/07/2026'},
+    {data:'17/07/2026', categoria:'Despesas Gerais', sub:'Enel, Sabesp, telefone e Internet', descricao:'LUZ', valor:93.33, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'17/07/2026'},
+    {data:'17/07/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'ELISANGELA DIAS', valor:1750, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'17/07/2026'},
+    {data:'17/07/2026', categoria:'Equipe técnica', sub:'Editor de vídeo', descricao:'NF 05 PRISCILA REYS', valor:5000, status:'Pago', centroCusto:'Pós produção', projeto:'Quinto Andar', vencimento:'17/07/2026'},
+    {data:'17/07/2026', categoria:'Pessoal', sub:'Vale transporte + VRefeição + Convênio', descricao:'AMIL ASSISTENCIA MEDICA', valor:2689.38, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'17/07/2026'},
+    {data:'20/07/2026', categoria:'Serv terceirizados', sub:'Jurídico / Alvará produção filme', descricao:'DARF L COELHO ADVOGADO', valor:86.17, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'20/07/2026'},
+    {data:'21/07/2026', categoria:'Imposto', sub:'ISS, PIS, Cofins, IRPJ e CSLL', descricao:'PIS COFINS', valor:1825, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'21/07/2026'},
+    {data:'21/07/2026', categoria:'Comissões', sub:'Comissão', descricao:'NF 78 ELISANGELA DIAS', valor:2250, status:'Pago', centroCusto:'Comercial', projeto:'Netshoes', vencimento:'21/07/2026'},
+    {data:'21/07/2026', categoria:'Equipe técnica', sub:'Motion designer', descricao:'NF 117 ADEMIR CAETANO', valor:2000, status:'Pago', centroCusto:'Pós produção', projeto:'Quinto Andar', vencimento:'21/07/2026'},
+    {data:'21/07/2026', categoria:'Pessoal', sub:'Salários PJs e 13 salário', descricao:'NF 77 ELISANGELA DIAS', valor:12000, status:'Pago', centroCusto:'Administrativo', projeto:'', vencimento:'21/07/2026'},
   ],
   projetos: [
     // Cliente, Nome, Tipo, ReceitaPrevista, Custo, Comissao(%), Status, DataInicio
@@ -1076,8 +1082,39 @@ function parseDespesas(rows) {
     valor:       parseNum(col(r,'valor')),
     status:      col(r,'status'),
     centroCusto: col(r,'centro de custo','centro custo'),
-    projeto:     col(r,'projeto vinculado','projeto')
+    projeto:     col(r,'projeto vinculado','projeto'),
+    vencimento:  col(r,'data vencimento','vencimento')
   })).filter(d => d.categoria || d.valor);
+}
+/* Junta a aba Configurações (Apelido + Tipo da conta — pra saber quem é
+   "Aplicação"/investimento) com a aba Painel (Saldo Atual já calculado lá,
+   incluindo transferências/rendimentos que não passam por NFs/Despesas). */
+function parseContasBancarias(painelRows, configRows) {
+  const tipoPorConta = {};
+  const hdrCfgIdx = configRows.findIndex(r => normH(r[1]||'')==='apelido');
+  if (hdrCfgIdx !== -1) {
+    for (let i=hdrCfgIdx+1; i<configRows.length; i++) {
+      const r = configRows[i];
+      const apelido = clean(r[1]||'');
+      if (!apelido) break;
+      tipoPorConta[normH(apelido)] = clean(r[5]||'');
+    }
+  }
+  const hdrIdx = painelRows.findIndex(r => r.some(c=>normH(c)==='conta bancaria'));
+  const contas = [];
+  if (hdrIdx !== -1) {
+    const hdrRow = painelRows[hdrIdx];
+    const colNome = hdrRow.findIndex(c=>normH(c)==='conta bancaria');
+    const colSaldo = hdrRow.findIndex(c=>normH(c)==='saldo atual');
+    for (let i=hdrIdx+1; i<painelRows.length; i++) {
+      const r = painelRows[i];
+      const nome = clean(r[colNome]||'');
+      if (!nome || normH(nome)==='saldo total') break;
+      const tipo = tipoPorConta[normH(nome)] || '';
+      contas.push({ nome, saldo: parseNum(r[colSaldo]||''), investido: /aplicaç/i.test(tipo) });
+    }
+  }
+  return contas;
 }
 function parseProjetos(rows) {
   return rows.map(r => ({
@@ -1093,7 +1130,7 @@ function parseProjetos(rows) {
 }
 
 /* === ESTADO GLOBAL === */
-let DATA = { config:{}, nfs:[], despesas:[], projetos:[] };
+let DATA = { config:{}, nfs:[], despesas:[], projetos:[], contas:[] };
 let FILTRO = { ano: null, mes: '' };
 /* ============================================================
    CAMADA DE CÁLCULO — filtros + agregações
@@ -1165,13 +1202,27 @@ function calcularKPIs() {
       else aReceberFuturo += n.valorBruto;
     }
   });
-  const aPagar = DATA.despesas.filter(d=>d.status==='A Pagar'||d.status==='Atrasado')
-                              .reduce((s,d)=>s+d.valor,0);
+  const despesasAPagar = DATA.despesas.filter(d=>d.status==='A Pagar'||d.status==='Atrasado');
+  const aPagar = despesasAPagar.reduce((s,d)=>s+d.valor,0);
+
+  // A Pagar no mês vs futuro, mesma lógica do A Receber (por Data Vencimento)
+  let aPagarMes=0, aPagarFuturo=0;
+  despesasAPagar.forEach(d=>{
+    const venc = parseDateBR(d.vencimento);
+    if (!venc || venc > fimMes) aPagarFuturo += d.valor;
+    else aPagarMes += d.valor;
+  });
+
+  // Posição de caixa: saldo por conta bancária (vem pronto da aba Painel,
+  // que já soma rendimentos/transferências que não passam por NFs/Despesas)
+  const totalCaixa = DATA.contas.filter(c=>!c.investido).reduce((s,c)=>s+c.saldo,0);
+  const totalInvestido = DATA.contas.filter(c=>c.investido).reduce((s,c)=>s+c.saldo,0);
 
   return {
     fatEmitido, fatPago, totalDespesas, despGerais, custosDiretos,
     lucro, margem, eficiencia, prazoMedio,
-    aReceberMes, aReceberFuturo, vencido, aPagar,
+    aReceberMes, aReceberFuturo, vencido, aPagar, aPagarMes, aPagarFuturo,
+    totalCaixa, totalInvestido,
     nfsCount: nfsEmitidas.length, despCount: despPagas.length
   };
 }
@@ -1260,6 +1311,49 @@ function renderM1() {
         ${k.nfsCount} NFs · ${k.despCount} despesas no período
       </div>
     </div>
+
+    <div class="panel-title" style="margin-bottom:2px">💰 Posição de Caixa</div>
+    <div class="panel-sub" style="margin-bottom:12px">O que está disponível, investido, a receber e a pagar agora</div>
+    <div class="kpi-grid">
+      <div class="kpi accent-green">
+        <div class="kpi-label">💰 Total em Caixa</div>
+        <div class="kpi-value green">${fmtBRL(k.totalCaixa)}</div>
+        <div class="kpi-foot">Contas correntes, disponível hoje</div>
+      </div>
+      <div class="kpi accent-sand">
+        <div class="kpi-label">📈 Total Investido</div>
+        <div class="kpi-value sand">${fmtBRL(k.totalInvestido)}</div>
+        <div class="kpi-foot">Aplicações</div>
+      </div>
+      <div class="kpi accent-green">
+        <div class="kpi-label">🟡 A Receber no Mês</div>
+        <div class="kpi-value green">${fmtBRL(k.aReceberMes)}</div>
+        <div class="kpi-foot">NFs com vencimento este mês</div>
+      </div>
+      <div class="kpi accent-red">
+        <div class="kpi-label">📤 A Pagar no Mês</div>
+        <div class="kpi-value red">${fmtBRL(k.aPagarMes)}</div>
+        <div class="kpi-foot">Despesas com vencimento este mês</div>
+      </div>
+    </div>
+
+    ${DATA.contas.length ? `
+    <div class="panel" style="margin-bottom:18px">
+      <div class="panel-title">Saldo por Conta</div>
+      <div class="panel-sub">Posição em cada conta bancária, hoje</div>
+      <table class="tbl">
+        <thead><tr><th>Conta</th><th></th><th class="r">Saldo Atual</th></tr></thead>
+        <tbody>
+          ${DATA.contas.map(c=>`
+            <tr>
+              <td class="strong">${c.nome}</td>
+              <td>${c.investido ? '<span class="badge badge-amber">📈 Investido</span>' : '<span class="badge badge-green">💰 Disponível</span>'}</td>
+              <td class="r strong">${fmtBRL(c.saldo)}</td>
+            </tr>`).join('')}
+          <tr class="tbl-total"><td>Total</td><td></td><td class="r">${fmtBRL(k.totalCaixa + k.totalInvestido)}</td></tr>
+        </tbody>
+      </table>
+    </div>` : ''}
 
     <div class="kpi-grid">
       <div class="kpi accent-sand">
@@ -1503,7 +1597,7 @@ function renderM3() {
     <div class="panel" style="margin-bottom:18px;border-color:rgba(192,86,63,.3)">
       <div class="panel-title" style="color:var(--red)">⚠️ Notas Fiscais Vencidas — Ação Necessária</div>
       <div class="panel-sub">Cobrança prioritária</div>
-      <table class="tbl">
+      <table class="tbl tbl-wide">
         <thead><tr><th>NF</th><th>Cliente</th><th>Projeto</th><th>Vencimento</th><th class="r">Valor</th></tr></thead>
         <tbody>
           ${vencidas.map(n=>`
@@ -1522,7 +1616,7 @@ function renderM3() {
       <div class="panel">
         <div class="panel-title">A Receber — Próximas Notas</div>
         <div class="panel-sub">Notas emitidas aguardando recebimento</div>
-        <table class="tbl">
+        <table class="tbl tbl-wide">
           <thead><tr><th>NF</th><th>Cliente</th><th>Vencimento</th><th></th><th class="r">Valor</th></tr></thead>
           <tbody>
             ${aVencer.length ? aVencer.slice(0,12).map(n=>`
@@ -1546,7 +1640,7 @@ function renderM3() {
     <div class="panel">
       <div class="panel-title">Despesas a Pagar</div>
       <div class="panel-sub">Compromissos financeiros pendentes</div>
-      <table class="tbl">
+      <table class="tbl tbl-wide">
         <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Centro de Custo</th><th class="r">Valor</th></tr></thead>
         <tbody>
           ${aPagar.length ? aPagar.map(d=>`
@@ -1638,7 +1732,7 @@ function renderM4() {
     <div class="panel" style="margin-bottom:18px">
       <div class="panel-title">Análise Completa por Cliente</div>
       <div class="panel-sub">Receita, custo e resultado consolidados</div>
-      <table class="tbl">
+      <table class="tbl tbl-wide">
         <thead><tr><th>Cliente</th><th class="r">Projetos</th><th class="r">Receita</th><th class="r">Custos</th><th class="r">Resultado</th><th class="r">Margem</th></tr></thead>
         <tbody>
           ${porCliente.map(c=>`
@@ -1665,7 +1759,7 @@ function renderM4() {
     <div class="panel">
       <div class="panel-title">Todos os Projetos</div>
       <div class="panel-sub">Detalhamento por projeto — ordenado por resultado</div>
-      <table class="tbl">
+      <table class="tbl tbl-wide">
         <thead><tr><th>Projeto</th><th>Cliente</th><th>Status</th><th class="r">Receita</th><th class="r">Custo</th><th class="r">Resultado</th><th class="r">Margem</th></tr></thead>
         <tbody>
           ${projsOrd.map(p=>`
@@ -1824,6 +1918,11 @@ async function carregarDados() {
   const projTxt = await fetchCSV(CSV.projetos);
   DATA.projetos = projTxt ? parseProjetos(parseCSV(projTxt, ['id'])) : (usouFallback=true, [...FALLBACK.projetos]);
   if (projTxt && !DATA.projetos.length) DATA.projetos = [...FALLBACK.projetos];
+
+  // Contas bancárias (Painel + Configurações)
+  const painelTxt = await fetchCSV(CSV.painel);
+  DATA.contas = (painelTxt && cfgTxt) ? parseContasBancarias(parseCSVRaw(painelTxt), parseCSVRaw(cfgTxt)) : (usouFallback=true, [...FALLBACK.contas]);
+  if (!DATA.contas.length) DATA.contas = [...FALLBACK.contas];
 
   return usouFallback;
 }
