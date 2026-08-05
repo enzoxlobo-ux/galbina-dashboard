@@ -71,15 +71,16 @@ body {
 .header-divider { width: 1px; height: 24px; background: var(--line); }
 .header-status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--ink-soft); font-weight: 500; }
 .header-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(79,122,40,.15); }
-.btn-reload { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; display: flex; align-items: center; gap: 6px; }
+.btn-reload { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background-color .15s, border-color .15s, color .15s; display: flex; align-items: center; gap: 6px; touch-action: manipulation; }
 .btn-reload:hover { border-color: var(--petrol2); color: var(--petrol); }
 
 /* === SIDEBAR === */
 .sidebar { position: fixed; top: var(--header); left: 0; bottom: 0; width: var(--sidebar); background: #2b2b2b; padding: 22px 14px; overflow-y: auto; z-index: 90; box-shadow: 2px 0 12px rgba(0,0,0,.08); }
 .nav-section { font-size: 10px; font-weight: 700; color: #767676; letter-spacing: .12em; text-transform: uppercase; padding: 0 12px; margin: 22px 0 8px; }
 .nav-section:first-child { margin-top: 4px; }
-.nav-item { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: #adadad; cursor: pointer; transition: all .14s; margin-bottom: 2px; }
+.nav-item { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 12px; border: none; border-radius: 10px; font-size: 13.5px; font-family: inherit; font-weight: 500; color: #adadad; background: transparent; text-align: left; cursor: pointer; transition: background .14s, color .14s, box-shadow .14s; margin-bottom: 2px; touch-action: manipulation; }
 .nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+.nav-item:focus-visible { outline: 2px solid var(--sand); outline-offset: 2px; }
 .nav-item.active { background: var(--green); color: #fff; box-shadow: 0 4px 14px rgba(79,122,40,.4); font-weight: 600; }
 .nav-icon { font-size: 16px; width: 20px; text-align: center; }
 .sidebar-foot { margin-top: 28px; padding: 14px 12px; border-top: 1px solid rgba(255,255,255,.09); }
@@ -91,16 +92,16 @@ body {
 /* === FILTER BAR === */
 .filter-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 13px; padding: 14px 18px; margin-bottom: 26px; box-shadow: var(--shadow-sm); }
 .filter-label { font-size: 11.5px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
-.filter-bar select, .filter-bar input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; font-family: inherit; font-weight: 500; cursor: pointer; outline: none; transition: border-color .15s; }
-.filter-bar select:focus, .filter-bar input:focus { border-color: var(--petrol2); }
+.filter-bar select, .filter-bar input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; font-family: inherit; font-weight: 500; cursor: pointer; transition: border-color .15s; }
+.filter-bar select:focus-visible, .filter-bar input:focus-visible { outline: 2px solid var(--sand); outline-offset: 1px; border-color: var(--petrol2); }
 .filter-sep { width: 1px; height: 26px; background: var(--line); }
-.btn { padding: 8px 18px; border-radius: 8px; border: none; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; letter-spacing: .01em; }
+.btn { padding: 8px 18px; border-radius: 8px; border: none; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background-color .15s, color .15s, border-color .15s; letter-spacing: .01em; touch-action: manipulation; }
 .btn-primary { background: var(--petrol); color: #fff; }
 .btn-primary:hover { background: var(--petrol2); }
 .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
 .btn-ghost:hover { color: var(--ink); border-color: var(--muted); }
 .toggle-group { display: flex; background: var(--bg2); border-radius: 9px; padding: 3px; gap: 2px; }
-.toggle-opt { padding: 7px 16px; border-radius: 7px; font-size: 12.5px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all .15s; border: none; background: transparent; font-family: inherit; }
+.toggle-opt { padding: 7px 16px; border-radius: 7px; font-size: 12.5px; font-weight: 600; color: var(--muted); cursor: pointer; transition: background-color .15s, color .15s, box-shadow .15s; border: none; background: transparent; font-family: inherit; touch-action: manipulation; }
 .toggle-opt.active { background: var(--card); color: var(--petrol); box-shadow: var(--shadow-sm); }
 
 /* === MODULE === */
@@ -124,7 +125,7 @@ body {
 .kpi.accent-green .kpi-icon-badge { background: rgba(79,122,40,.13); }
 .kpi.accent-red .kpi-icon-badge { background: rgba(192,86,63,.12); }
 .kpi.accent-sand .kpi-icon-badge { background: rgba(111,165,60,.15); }
-.kpi-value { font-family: 'Fraunces', serif; font-size: 27px; font-weight: 600; color: var(--ink); margin-top: 8px; letter-spacing: -.02em; }
+.kpi-value { font-family: 'Fraunces', serif; font-size: 27px; font-weight: 600; color: var(--ink); margin-top: 8px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .kpi-value.green { color: var(--green); }
 .kpi-value.red { color: var(--red); }
 .kpi-value.sand { color: var(--sand); }
@@ -142,7 +143,7 @@ body {
 .panel-sub { font-size: 11.5px; color: var(--muted); margin-bottom: 18px; font-weight: 400; }
 
 /* === TABLES === */
-.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 .tbl thead th { text-align: left; padding: 10px 12px; font-size: 10.5px; font-weight: 700; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; border-bottom: 2px solid var(--line); }
 .tbl thead th.r, .tbl tbody td.r { text-align: right; }
 .tbl tbody td { padding: 11px 12px; border-bottom: 1px solid var(--line2); color: var(--ink-soft); font-weight: 500; }
@@ -221,7 +222,7 @@ body {
     border-bottom: 1px solid rgba(255,255,255,.09);
   }
   .nav-section, .sidebar-foot { display: none; }
-  .nav-item { flex: 0 0 auto; white-space: nowrap; margin-bottom: 0; padding: 8px 13px; font-size: 12.5px; }
+  .nav-item { flex: 0 0 auto; width: auto; white-space: nowrap; margin-bottom: 0; padding: 8px 13px; font-size: 12.5px; }
 
   .main { margin-left: 0; padding: 18px 14px 50px; }
   .kpi-grid, .kpi-grid.cols-3 { grid-template-columns: 1fr; }
@@ -274,7 +275,7 @@ body {
 <body>
 
 <!-- LOADER -->
-<div id="loader">
+<div id="loader" role="status" aria-live="polite">
   <div class="loader-brand">Galbina</div>
   <div class="spinner"></div>
   <div class="loader-text">Carregando dados da planilha…</div>
@@ -292,7 +293,7 @@ body {
 
 <!-- HEADER -->
 <header class="header">
-  <div class="header-mark">G</div>
+  <div class="header-mark" aria-hidden="true">G</div>
   <div>
     <div class="header-title">Dashboard Financeiro</div>
     <div class="header-sub" id="header-cliente">GALBINA · INTELIGÊNCIA FINANCEIRA</div>
@@ -308,12 +309,12 @@ body {
 <!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="nav-section">Visão</div>
-  <div class="nav-item active" data-module="M1"><span class="nav-icon">◆</span> Visão Geral</div>
-  <div class="nav-item" data-module="M5"><span class="nav-icon">◐</span> Caixa</div>
+  <button type="button" class="nav-item active" data-module="M1" aria-current="page"><span class="nav-icon" aria-hidden="true">◆</span> Visão Geral</button>
+  <button type="button" class="nav-item" data-module="M5"><span class="nav-icon" aria-hidden="true">◐</span> Caixa</button>
   <div class="nav-section">Análise</div>
-  <div class="nav-item" data-module="M2"><span class="nav-icon">◇</span> Insights &amp; Análises</div>
-  <div class="nav-item" data-module="M3"><span class="nav-icon">◈</span> Lançamentos</div>
-  <div class="nav-item" data-module="M4"><span class="nav-icon">◉</span> Projetos</div>
+  <button type="button" class="nav-item" data-module="M2"><span class="nav-icon" aria-hidden="true">◇</span> Insights &amp; Análises</button>
+  <button type="button" class="nav-item" data-module="M3"><span class="nav-icon" aria-hidden="true">◈</span> Lançamentos</button>
+  <button type="button" class="nav-item" data-module="M4"><span class="nav-icon" aria-hidden="true">◉</span> Projetos</button>
   <div class="sidebar-foot">
     <div class="sidebar-foot-txt">
       Dados sincronizados<br>com a planilha-mestre.<br>
@@ -327,10 +328,10 @@ body {
 
   <!-- FILTER BAR -->
   <div class="filter-bar">
-    <span class="filter-label">ANO</span>
-    <select id="filter-ano"></select>
-    <span class="filter-label">MÊS</span>
-    <select id="filter-mes">
+    <label class="filter-label" for="filter-ano">ANO</label>
+    <select id="filter-ano" name="ano"></select>
+    <label class="filter-label" for="filter-mes">MÊS</label>
+    <select id="filter-mes" name="mes">
       <option value="">Ano todo</option>
       <option value="1">Janeiro</option><option value="2">Fevereiro</option>
       <option value="3">Março</option><option value="4">Abril</option>
@@ -345,35 +346,35 @@ body {
 
   <!-- M1 — VISÃO GERAL -->
   <div class="module active" id="M1">
-    <div class="mod-title">Visão Geral</div>
+    <h1 class="mod-title">Visão Geral</h1>
     <div class="mod-sub">Indicadores consolidados do período selecionado</div>
     <div id="m1-content"></div>
   </div>
 
   <!-- M5 — CAIXA -->
   <div class="module" id="M5">
-    <div class="mod-title">Caixa</div>
+    <h1 class="mod-title">Caixa</h1>
     <div class="mod-sub">O que está disponível, investido e a posição de caixa projetada</div>
     <div id="m5-content"></div>
   </div>
 
   <!-- M2 — INSIGHTS & ANÁLISES -->
   <div class="module" id="M2">
-    <div class="mod-title">Insights &amp; Análises</div>
+    <h1 class="mod-title">Insights &amp; Análises</h1>
     <div class="mod-sub">Evolução, composição de despesas e leitura executiva</div>
     <div id="m2-content"></div>
   </div>
 
   <!-- M3 — LANÇAMENTOS -->
   <div class="module" id="M3">
-    <div class="mod-title">Lançamentos</div>
+    <h1 class="mod-title">Lançamentos</h1>
     <div class="mod-sub">A receber, a pagar e situação de cada nota</div>
     <div id="m3-content"></div>
   </div>
 
   <!-- M4 — PROJETOS -->
   <div class="module" id="M4">
-    <div class="mod-title">Projetos</div>
+    <h1 class="mod-title">Projetos</h1>
     <div class="mod-sub">Rentabilidade por projeto e por cliente</div>
     <div id="m4-content"></div>
   </div>
@@ -1452,25 +1453,25 @@ function renderM1() {
     <div class="panel-sub" style="margin-bottom:12px">O que efetivamente entrou e saiu da conta no período</div>
     <div class="kpi-grid">
       <div class="kpi accent-sand">
-        <div class="kpi-icon-badge">💵</div>
+        <div class="kpi-icon-badge" aria-hidden="true">💵</div>
         <div class="kpi-label" data-tip="Soma do valor bruto de todas as notas fiscais emitidas no período, recebidas ou não.">Faturamento Emitido</div>
         <div class="kpi-value petrol">${fmtBRL(k.fatEmitido)}</div>
         <div class="kpi-foot">Notas fiscais emitidas</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-icon-badge">💰</div>
+        <div class="kpi-icon-badge" aria-hidden="true">💰</div>
         <div class="kpi-label" data-tip="Soma das notas fiscais cujo recebimento caiu na conta dentro do período — regime de caixa, não de emissão. Pode incluir vendas emitidas em anos anteriores.">Faturamento Recebido</div>
         <div class="kpi-value green">${fmtBRL(k.fatRecebido)}</div>
         <div class="kpi-foot">Eficiência: ${fmtPct(k.eficiencia)}</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-icon-badge">💸</div>
+        <div class="kpi-icon-badge" aria-hidden="true">💸</div>
         <div class="kpi-label" data-tip="Soma de todas as despesas com status Pago cuja Data de Pagamento caiu dentro do período, sejam gerais (estrutura) ou diretas (vinculadas a projeto).">Despesas Pagas</div>
         <div class="kpi-value red">${fmtBRL(k.totalDespesas)}</div>
         <div class="kpi-foot">Gerais ${fmtBRL(k.despGerais)} · Diretas ${fmtBRL(k.custosDiretos)}</div>
       </div>
       <div class="kpi ${k.lucro>=0?'accent-green':'accent-red'}">
-        <div class="kpi-icon-badge">✨</div>
+        <div class="kpi-icon-badge" aria-hidden="true">✨</div>
         <div class="kpi-label" data-tip="Faturamento Recebido menos Despesas Pagas no período — dinheiro que efetivamente entrou menos o que efetivamente saiu da conta. Não é o lucro contábil por competência (veja abaixo).">Lucro Líquido (Caixa)</div>
         <div class="kpi-value ${k.lucro>=0?'green':'red'}">${fmtBRL(k.lucro)}</div>
         <div class="kpi-foot ${k.lucro>=0?'up':'down'}">
@@ -1483,13 +1484,13 @@ function renderM1() {
     <div class="panel-sub" style="margin-bottom:12px">O que foi vendido e incorrido no período, tenha virado dinheiro ou não</div>
     <div class="kpi-grid">
       <div class="kpi">
-        <div class="kpi-icon-badge">📥</div>
+        <div class="kpi-icon-badge" aria-hidden="true">📥</div>
         <div class="kpi-label" data-tip="Todas as despesas lançadas no período pela Data de Lançamento, pagas ou ainda a pagar — a visão de custo por competência, não de caixa.">Despesas Incorridas</div>
         <div class="kpi-value">${fmtBRL(k.totalDespesasContabil)}</div>
         <div class="kpi-foot">Por Data de Lançamento, pagas ou não</div>
       </div>
       <div class="kpi ${k.lucroContabil>=0?'accent-green':'accent-red'}">
-        <div class="kpi-icon-badge">📐</div>
+        <div class="kpi-icon-badge" aria-hidden="true">📐</div>
         <div class="kpi-label" data-tip="Faturamento Emitido menos Despesas Incorridas no período, por competência — a visão contábil do resultado, independente de quando o dinheiro efetivamente entrou ou saiu.">Lucro Líquido (Contábil)</div>
         <div class="kpi-value ${k.lucroContabil>=0?'green':'red'}">${fmtBRL(k.lucroContabil)}</div>
         <div class="kpi-foot ${k.lucroContabil>=0?'up':'down'}">Margem: ${fmtPct(k.margemContabil)}</div>
@@ -1498,19 +1499,19 @@ function renderM1() {
 
     <div class="kpi-grid cols-3">
       <div class="kpi">
-        <div class="kpi-icon-badge">📊</div>
+        <div class="kpi-icon-badge" aria-hidden="true">📊</div>
         <div class="kpi-label" data-tip="Lucro Líquido de Caixa dividido pelo Faturamento Recebido. Mostra quanto sobra de cada real recebido depois das despesas pagas.">Margem Líquida (Caixa)</div>
         <div class="kpi-value">${fmtPct(k.margem)}</div>
         <div class="kpi-foot">Meta: ${fmtPct(DATA.config.metaMargem||0.30)}</div>
       </div>
       <div class="kpi">
-        <div class="kpi-icon-badge">⚡</div>
+        <div class="kpi-icon-badge" aria-hidden="true">⚡</div>
         <div class="kpi-label" data-tip="Faturamento Recebido dividido pelo Faturamento Emitido. Mede quanto do que foi faturado já virou dinheiro em caixa.">Índice de Eficiência</div>
         <div class="kpi-value">${fmtPct(k.eficiencia)}</div>
         <div class="kpi-foot">Recebido ÷ Emitido</div>
       </div>
       <div class="kpi">
-        <div class="kpi-icon-badge">⏱️</div>
+        <div class="kpi-icon-badge" aria-hidden="true">⏱️</div>
         <div class="kpi-label" data-tip="Média de dias entre a emissão da nota fiscal e a data em que ela foi efetivamente recebida.">Prazo Médio Receb.</div>
         <div class="kpi-value">${Math.round(k.prazoMedio)} dias</div>
         <div class="kpi-foot">Da emissão ao recebimento</div>
@@ -1551,25 +1552,25 @@ function renderM5() {
   document.getElementById('m5-content').innerHTML = `
     <div class="kpi-grid">
       <div class="kpi accent-green">
-        <div class="kpi-icon-badge">💰</div>
+        <div class="kpi-icon-badge" aria-hidden="true">💰</div>
         <div class="kpi-label" data-tip="Soma do saldo atual de todas as contas que não são de investimento/aplicação — dinheiro pronto pra usar hoje.">Total em Caixa</div>
         <div class="kpi-value green">${fmtBRL(k.totalCaixa)}</div>
         <div class="kpi-foot">Contas correntes, disponível hoje</div>
       </div>
       <div class="kpi accent-sand">
-        <div class="kpi-icon-badge">📈</div>
+        <div class="kpi-icon-badge" aria-hidden="true">📈</div>
         <div class="kpi-label" data-tip="Soma do saldo atual das contas classificadas como Aplicação em Configurações. Não conta como caixa disponível imediato.">Total Investido</div>
         <div class="kpi-value sand">${fmtBRL(k.totalInvestido)}</div>
         <div class="kpi-foot">Aplicações</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-icon-badge">🟡</div>
+        <div class="kpi-icon-badge" aria-hidden="true">🟡</div>
         <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento dentro do mês atual.">A Receber no Mês</div>
         <div class="kpi-value green">${fmtBRL(k.aReceberMes)}</div>
         <div class="kpi-foot">NFs com vencimento este mês</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-icon-badge">📤</div>
+        <div class="kpi-icon-badge" aria-hidden="true">📤</div>
         <div class="kpi-label" data-tip="Despesas com status A Pagar ou Atrasado, com vencimento dentro do mês atual.">A Pagar no Mês</div>
         <div class="kpi-value red">${fmtBRL(k.aPagarMes)}</div>
         <div class="kpi-foot">Despesas com vencimento este mês</div>
@@ -1599,7 +1600,7 @@ function renderM5() {
     <div class="kpi-grid cols-3">
       ${previsao.map(p=>`
         <div class="kpi ${p.saldoProjetado>=0?'accent-green':'accent-red'}">
-          <div class="kpi-icon-badge">📆</div>
+          <div class="kpi-icon-badge" aria-hidden="true">📆</div>
           <div class="kpi-label" data-tip="Saldo em caixa hoje (${fmtBRL(k.totalCaixa)}) + entradas previstas (${fmtBRL(p.entradas)}) − saídas previstas (${fmtBRL(p.saidas)}) até daqui a ${p.dias} dias.">Próximos ${p.dias} dias</div>
           <div class="kpi-value ${p.saldoProjetado>=0?'green':'red'}">${fmtBRL(p.saldoProjetado)}</div>
           <div class="kpi-foot"><span style="color:var(--green)">+${fmtBRL(p.entradas)}</span> · <span style="color:var(--red)">−${fmtBRL(p.saidas)}</span></div>
@@ -1783,25 +1784,25 @@ function renderM3() {
   document.getElementById('m3-content').innerHTML = `
     <div class="kpi-grid">
       <div class="kpi accent-green">
-        <div class="kpi-icon-badge">🟡</div>
+        <div class="kpi-icon-badge" aria-hidden="true">🟡</div>
         <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento dentro do mês atual.">A Receber no Mês</div>
         <div class="kpi-value green">${fmtBRL(k.aReceberMes)}</div>
         <div class="kpi-foot">NFs com vencimento neste mês</div>
       </div>
       <div class="kpi accent-sand">
-        <div class="kpi-icon-badge">📅</div>
+        <div class="kpi-icon-badge" aria-hidden="true">📅</div>
         <div class="kpi-label" data-tip="Notas fiscais ainda não recebidas, com vencimento depois do fim do mês atual.">A Receber — Futuro</div>
         <div class="kpi-value sand">${fmtBRL(k.aReceberFuturo)}</div>
         <div class="kpi-foot">Próximos meses</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-icon-badge">🔴</div>
+        <div class="kpi-icon-badge" aria-hidden="true">🔴</div>
         <div class="kpi-label" data-tip="Notas fiscais cujo vencimento já passou e ainda não foram recebidas. Prioridade de cobrança.">NFs Vencidas</div>
         <div class="kpi-value red">${fmtBRL(k.vencido)}</div>
         <div class="kpi-foot">${vencidas.length} nota${vencidas.length!==1?'s':''} em atraso</div>
       </div>
       <div class="kpi accent-red">
-        <div class="kpi-icon-badge">📤</div>
+        <div class="kpi-icon-badge" aria-hidden="true">📤</div>
         <div class="kpi-label" data-tip="Todas as despesas com status A Pagar ou Atrasado, sem filtro de data — visão geral do compromisso pendente.">Despesas a Pagar</div>
         <div class="kpi-value red">${fmtBRL(k.aPagar)}</div>
         <div class="kpi-foot">${aPagar.length} lançamento${aPagar.length!==1?'s':''} pendente${aPagar.length!==1?'s':''}</div>
@@ -1910,25 +1911,25 @@ function renderM4() {
   document.getElementById('m4-content').innerHTML = `
     <div class="kpi-grid">
       <div class="kpi accent-sand">
-        <div class="kpi-icon-badge">🎬</div>
+        <div class="kpi-icon-badge" aria-hidden="true">🎬</div>
         <div class="kpi-label" data-tip="Projetos com status Em Andamento, do total de projetos cadastrados.">Projetos em Andamento</div>
         <div class="kpi-value sand">${emAndamento.length}</div>
         <div class="kpi-foot">De ${projs.length} cadastrados</div>
       </div>
       <div class="kpi accent-sand">
-        <div class="kpi-icon-badge">📝</div>
+        <div class="kpi-icon-badge" aria-hidden="true">📝</div>
         <div class="kpi-label" data-tip="Soma da receita prevista de todos os projetos ainda Em Andamento — o que falta faturar quando forem concluídos.">Total a Faturar</div>
         <div class="kpi-value petrol">${fmtBRL(aFaturar)}</div>
         <div class="kpi-foot">Projetos em andamento</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-icon-badge">📈</div>
+        <div class="kpi-icon-badge" aria-hidden="true">📈</div>
         <div class="kpi-label" data-tip="Média da margem (resultado ÷ receita) apenas dos projetos com status Pago.">Margem Média</div>
         <div class="kpi-value green">${fmtPct(margemMedia)}</div>
         <div class="kpi-foot">Projetos já pagos</div>
       </div>
       <div class="kpi accent-green">
-        <div class="kpi-icon-badge">🏆</div>
+        <div class="kpi-icon-badge" aria-hidden="true">🏆</div>
         <div class="kpi-label" data-tip="Projeto com o maior resultado (receita líquida menos custo e comissão) entre todos os cadastrados.">Mais Lucrativo</div>
         <div class="kpi-value" style="font-size:18px">${maisLucrativo?maisLucrativo.nome:'—'}</div>
         <div class="kpi-foot up">${maisLucrativo?fmtBRL(maisLucrativo.resultado)+' · '+fmtPct(maisLucrativo.margem):''}</div>
@@ -2032,9 +2033,11 @@ function renderM4() {
 
 function showModule(id) {
   document.querySelectorAll('.module').forEach(m=>m.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>{ n.classList.remove('active'); n.removeAttribute('aria-current'); });
   document.getElementById(id).classList.add('active');
-  document.querySelector(`.nav-item[data-module="${id}"]`).classList.add('active');
+  const navAtivo = document.querySelector(`.nav-item[data-module="${id}"]`);
+  navAtivo.classList.add('active');
+  navAtivo.setAttribute('aria-current', 'page');
   renderAtual(id);
 }
 
