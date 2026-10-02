@@ -13,8 +13,8 @@
 (function(){
   try {
     var t = localStorage.getItem('gaibina-theme');
-    if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
-  } catch(e) {}
+    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  } catch(e) { document.documentElement.setAttribute('data-theme', 'dark'); }
 })();
 </script>
 <script>/* Chart.js 4.4.0 embutido — sem CDN, funciona offline */
@@ -3009,7 +3009,12 @@ document.getElementById('btn-reload').addEventListener('click', async ()=>{
 function aplicarTema(tema, redesenha) {
   document.documentElement.setAttribute('data-theme', tema);
   try { localStorage.setItem('gaibina-theme', tema); } catch(e) {}
-  document.getElementById('btn-theme').textContent = tema === 'dark' ? '☀️' : '🌙';
+  const btnTema = document.getElementById('btn-theme');
+  btnTema.textContent = tema === 'dark' ? '☀️' : '🌙';
+  btnTema.setAttribute('aria-label', tema === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro');
+  btnTema.title = btnTema.getAttribute('aria-label');
+  const metaTema = document.querySelector('meta[name="theme-color"]');
+  if (metaTema) metaTema.setAttribute('content', tema === 'dark' ? '#1a1a18' : '#faf9f6');
   Chart.defaults.color = tema === 'dark' ? '#8f8d83' : '#7a7a7a';
   if (redesenha) renderExecutive(); // recria o gráfico com as cores do novo tema
 }
