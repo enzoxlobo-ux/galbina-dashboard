@@ -12,7 +12,7 @@
    offline (aquele marcador procura pelo inicio do script principal do dashboard). */
 (function(){
   try {
-    var t = localStorage.getItem('gaibina-theme');
+    var t = localStorage.getItem('gaibina-theme-v2');
     document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
   } catch(e) { document.documentElement.setAttribute('data-theme', 'dark'); }
 })();
@@ -3008,7 +3008,7 @@ document.getElementById('btn-reload').addEventListener('click', async ()=>{
    por isso a chamada de sincronização do ícone no carregamento passa false. */
 function aplicarTema(tema, redesenha) {
   document.documentElement.setAttribute('data-theme', tema);
-  try { localStorage.setItem('gaibina-theme', tema); } catch(e) {}
+  try { localStorage.setItem('gaibina-theme-v2', tema); } catch(e) {}
   const btnTema = document.getElementById('btn-theme');
   btnTema.textContent = tema === 'dark' ? '☀️' : '🌙';
   btnTema.setAttribute('aria-label', tema === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro');
