@@ -83,7 +83,7 @@
   --shadow-lg: 0 16px 48px rgba(0,0,0,.5);
 }
 body {
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Outfit', 'Segoe UI', Arial, sans-serif;
   background: var(--bg);
   color: var(--ink);
   min-height: 100vh;
@@ -342,6 +342,15 @@ body {
 .filter-bar label[for="filter-mes"], .filter-bar #filter-mes,
 .filter-bar label[for="filter-conta"], .filter-bar #filter-conta { display: none; }
 .exec-page { display: block; }
+.exec-tabs { display:flex; gap:6px; padding:5px; width:max-content; max-width:100%; border:1px solid var(--line); background:var(--card); border-radius:12px; margin-bottom:24px; }
+.exec-tab { border:0; border-radius:8px; background:transparent; color:var(--ink-soft); padding:11px 20px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+.exec-tab.selected { background:var(--green); color:var(--card); }
+.exec-tab:focus-visible { outline:2px solid var(--green); outline-offset:3px; }
+.exec-span-3 { grid-column:span 3; }
+.exec-detail-list .exec-table-wrap { max-height:420px; overflow:auto; }
+.exec-detail-list th { position:sticky; top:0; background:var(--card); z-index:1; }
+@media(max-width:900px) { .exec-span-3 { grid-column:span 6; } }
+@media(max-width:560px) { .exec-span-3 { grid-column:span 12; } .exec-tab { padding:10px 12px; } }
 .exec-hero { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin:6px 0 22px; }
 .exec-eyebrow { color:var(--green); font-size:11px; font-weight:700; letter-spacing:.13em; text-transform:uppercase; }
 .exec-title { font-family:'Fraunces',serif; font-size:clamp(28px,3vw,42px); line-height:1.05; letter-spacing:-.035em; margin-top:6px; }
@@ -2646,7 +2655,8 @@ function calcularExecutivo() {
 
   const pendentes = DATA.nfs.filter(n=>passaDimensoes(n) && clean(n.numero) && !parseDateBR(n.recebimento));
   const aReceber=pendentes.reduce((s,n)=>s+n.valorBruto,0);
-  const vencido=pendentes.filter(n=>{const d=parseDateBR(n.vencimento);return d&&d<asOf;}).reduce((s,n)=>s+n.valorBruto,0);
+  const inicioDia=new Date(asOf); inicioDia.setHours(0,0,0,0);
+  const vencido=pendentes.filter(n=>{const d=parseDateBR(n.vencimento);return d&&d<inicioDia;}).reduce((s,n)=>s+n.valorBruto,0);
   const semVencimento=pendentes.filter(n=>!parseDateBR(n.vencimento)).reduce((s,n)=>s+n.valorBruto,0);
   const aFaturar=DATA.nfs.filter(n=>passaDimensoes(n)&&!clean(n.numero)&&!parseDateBR(n.recebimento)).reduce((s,n)=>s+n.valorBruto,0);
 
@@ -2677,7 +2687,7 @@ function calcularExecutivo() {
     tributosEmProjeto,nfsImpostoZerado,custosSemProjetoCadastrado};
 }
 
-function renderExecutive() {
+function renderExecutiveOverview() {
   const el=document.getElementById('executive-page');
   if (!el) return;
   const x=calcularExecutivo();
@@ -2694,7 +2704,7 @@ function renderExecutive() {
   el.innerHTML=`
     <div class="exec-hero">
       <div><div class="exec-eyebrow">Visão executiva · ${htmlSafe(PROFILE.cliente||DATA.config.cliente||'Horda')}</div>
-        <h1 class="exec-title">O essencial financeiro, em uma página.</h1>
+        <h1 class="exec-title">O essencial para decidir.</h1>
         <p class="exec-lead">Caixa, compromissos de curto prazo e resultado dos projetos — com imposto variável trazido diretamente das notas fiscais.</p></div>
       <div class="exec-stamp"><strong>Posição dos dados</strong>${htmlSafe(SNAPSHOT||fmtDate(x.asOf))}<br>Ano analisado: ${x.ano}</div>
     </div>
@@ -2737,6 +2747,73 @@ function renderExecutive() {
 /* ============================================================
    NAVEGAÇÃO + FILTROS + INIT
    ============================================================ */
+
+let EXEC_VIEW = 'executivo';
+function selecionarVisaoExecutiva(view) {
+  EXEC_VIEW = view;
+  renderExecutive();
+}
+
+function calcularAcompanhamento() {
+  const x = calcularExecutivo();
+  const noAno = value => { const d=parseDateBR(value); return d && d.getFullYear()===x.ano; };
+  const soma = (rows, field) => rows.reduce((s,r)=>s+(r[field]||0),0);
+  const nfs = DATA.nfs.filter(n=>passaDimensoes(n)&&n.valorBruto>0&&!/cancelad/i.test(n.statusRaw||''));
+  const emitidas = nfs.filter(n=>clean(n.numero)&&noAno(n.emissao));
+  const previstas = nfs.filter(n=>!clean(n.numero)&&!parseDateBR(n.recebimento));
+  // Linhas sem emissão só entram no ano quando existe vencimento explícito.
+  const aFaturar = previstas.filter(n=>noAno(n.emissao)||(!parseDateBR(n.emissao)&&noAno(n.vencimento)));
+  const semAno = previstas.filter(n=>!parseDateBR(n.emissao)&&!parseDateBR(n.vencimento));
+  const recebidas = nfs.filter(n=>noAno(n.recebimento));
+  const abertas = emitidas.filter(n=>!parseDateBR(n.recebimento));
+  const despesas = DATA.despesas.filter(d=>passaDimensoes(d)&&d.valor>0&&!/cancelad/i.test(d.status||''));
+  const pagas = despesas.filter(d=>noAno(d.dataPagamento));
+  const pagasSemData = despesas.filter(d=>!parseDateBR(d.dataPagamento)&&/\bpago\b|\bpaga\b/i.test(d.status||''));
+  const pendentes = despesas.filter(d=>!parseDateBR(d.dataPagamento)&&!/\bpago\b|\bpaga\b/i.test(d.status||''));
+  const aPagar = pendentes.filter(d=>noAno(d.vencimento)||(!parseDateBR(d.vencimento)&&noAno(d.data)));
+  const inicioDia=new Date(x.asOf); inicioDia.setHours(0,0,0,0);
+  const vencidas = aPagar.filter(d=>{const dt=parseDateBR(d.vencimento);return dt&&dt<inicioDia;});
+  const semData = aPagar.filter(d=>!parseDateBR(d.vencimento));
+  const meses = Array.from({length:12},(_,i)=>{
+    const totalMes=(rows,field,value)=>soma(rows.filter(r=>{const dt=parseDateBR(r[field]);return dt&&dt.getMonth()===i;}),value);
+    return {label:monthName(i+1),faturado:totalMes(emitidas,'emissao','valorBruto'),
+      aFaturar:totalMes(aFaturar.map(n=>({...n,referencia:n.emissao||n.vencimento})),'referencia','valorBruto'),
+      pago:totalMes(pagas,'dataPagamento','valor'),aPagar:totalMes(aPagar,'vencimento','valor')};
+  });
+  return {...x,emitidas,aFaturar,semAno,recebidas,abertas,pagas,pagasSemData,aPagar,vencidas,semData,meses,
+    faturado:soma(emitidas,'valorBruto'),previsto:soma(aFaturar,'valorBruto'),recebido:soma(recebidas,'valorBruto'),
+    aberto:soma(abertas,'valorBruto'),pago:soma(pagas,'valor'),pendente:soma(aPagar,'valor'),
+    atrasado:soma(vencidas,'valor'),semDataTotal:soma(semData,'valor')};
+}
+
+function renderExecutive() {
+  killChart('exec-acompanhamento');
+  renderExecutiveOverview();
+  const el=document.getElementById('executive-page');
+  const x=calcularAcompanhamento();
+  const nav=`<nav class="exec-tabs" aria-label="Visões financeiras">${[['executivo','Executivo'],['faturamento','Faturamento'],['pagamentos','Pagamentos']].map(([id,label])=>`<button type="button" class="exec-tab ${EXEC_VIEW===id?'selected':''}" aria-current="${EXEC_VIEW===id?'page':'false'}" onclick="selecionarVisaoExecutiva('${id}')">${label}</button>`).join('')}</nav>`;
+  if(EXEC_VIEW==='executivo'){el.insertAdjacentHTML('afterbegin',nav);return;}
+  killChart('exec-comparativo');
+  const faturamento=EXEC_VIEW==='faturamento';
+  const card=(label,value,sub)=>`<article class="exec-card exec-span-3"><div class="exec-card-pad"><div class="exec-card-title">${label}</div><div class="receivable-total">${fmtBRL(value)}</div><div class="exec-card-sub">${sub}</div></div></article>`;
+  const table=(headers,rows)=>`<div class="exec-table-wrap"><table class="exec-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows||`<tr><td colspan="${headers.length}">Nenhum lançamento nesta seleção.</td></tr>`}</tbody></table></div>`;
+  const nfRows=x.aFaturar.map(n=>`<tr><td>${htmlSafe(n.cliente||'Sem cliente')}</td><td>${htmlSafe(n.projeto||'—')}</td><td>${htmlSafe(n.emissao||'—')}</td><td>${htmlSafe(n.vencimento||'—')}</td><td>${fmtBRL(n.valorBruto)}</td></tr>`).join('');
+  const despRows=[...x.aPagar].sort((a,b)=>(parseDateBR(a.vencimento)?.getTime()||Infinity)-(parseDateBR(b.vencimento)?.getTime()||Infinity)).map(d=>`<tr><td>${htmlSafe(d.descricao||d.fornecedor||'Sem descrição')}</td><td>${htmlSafe(d.categoria||'—')}</td><td>${htmlSafe(d.projeto||'—')}</td><td>${htmlSafe(d.vencimento||'Sem data')}</td><td>${fmtBRL(d.valor)}</td></tr>`).join('');
+  const realizadasRows=faturamento
+    ? [...x.emitidas].sort((a,b)=>parseDateBR(b.emissao)-parseDateBR(a.emissao)).map(n=>`<tr><td>${htmlSafe(n.numero)}</td><td>${htmlSafe(n.cliente||'—')}</td><td>${htmlSafe(n.projeto||'—')}</td><td>${htmlSafe(n.emissao)}</td><td>${htmlSafe(n.recebimento||'Em aberto')}</td><td>${fmtBRL(n.valorBruto)}</td></tr>`).join('')
+    : [...x.pagas].sort((a,b)=>parseDateBR(b.dataPagamento)-parseDateBR(a.dataPagamento)).map(d=>`<tr><td>${htmlSafe(d.descricao||d.fornecedor||'—')}</td><td>${htmlSafe(d.categoria||'—')}</td><td>${htmlSafe(d.projeto||'—')}</td><td>${htmlSafe(d.dataPagamento)}</td><td>${htmlSafe(d.contaBancaria||'—')}</td><td>${fmtBRL(d.valor)}</td></tr>`).join('');
+  const mensalRows=x.meses.map(m=>`<tr><td>${m.label}</td><td>${fmtBRL(faturamento?m.faturado:m.pago)}</td><td>${fmtBRL(faturamento?m.aFaturar:m.aPagar)}</td><td>${fmtBRL(faturamento?m.faturado+m.aFaturar:m.pago+m.aPagar)}</td></tr>`).join('');
+  el.innerHTML=nav+`<div class="exec-hero"><div><div class="exec-eyebrow">${htmlSafe(PROFILE.cliente||'Horda')} · ${x.ano}</div><h1 class="exec-title">${faturamento?'Faturamento do ano.':'Pagamentos e compromissos.'}</h1><p class="exec-lead">${faturamento?'O que já foi emitido e o que está cadastrado para faturar.':'O que já saiu do caixa e os compromissos cadastrados para o ano.'}</p></div><div class="exec-stamp"><strong>Posição dos dados</strong>${htmlSafe(SNAPSHOT)}<br>Ano analisado: ${x.ano}</div></div><div class="exec-grid">
+    ${faturamento?card('Faturado',x.faturado,'NFs numeradas, pela emissão no ano')+card('A faturar',x.previsto,'Linhas sem número, com referência no ano')+card('Recebido no ano',x.recebido,'Pela data de recebimento; pode incluir NFs de outros anos')+card('A receber do faturado',x.aberto,'NFs emitidas no ano ainda sem recebimento'):card('Pago no ano',x.pago,'Pela data efetiva do pagamento')+card('A pagar no ano',x.pendente,'Pendências com vencimento no ano ou lançamento sem vencimento')+card('Vencido',x.atrasado,'Parte do a pagar, na data da posição')+card('Sem vencimento',x.semDataTotal,'Parte do a pagar que precisa de data')}
+    <article class="exec-card exec-span-8"><div class="exec-card-pad"><div class="exec-card-title">${faturamento?'Faturado × a faturar':'Pago × a pagar'} por mês</div><div class="exec-card-sub">${faturamento?'Emissão da NF; nas previsões sem emissão, usa o vencimento informado.':'Pagamento efetivo para pagos e vencimento para pendências.'}</div><div class="exec-chart"><canvas id="exec-acompanhamento"></canvas></div></div></article>
+    <article class="exec-card exec-span-4"><div class="exec-card-pad"><div class="exec-card-title">${faturamento?'Carteira cadastrada no ano':'Total pago + compromissos'}</div><div class="balance-total" style="color:var(--green)">${fmtBRL(faturamento?x.faturado+x.previsto:x.pago+x.pendente)}</div><div class="exec-footnote">${faturamento?'Faturado + a faturar. Recebido e a receber são leituras complementares e não devem ser somados a este total.':'Soma dos pagamentos do ano e das pendências selecionadas. Valores sem vencimento ficam fora do gráfico mensal.'}</div>${faturamento&&x.semAno.length?`<div class="exec-alert">${x.semAno.length} previsão(ões) sem emissão e sem vencimento: sem ano definido, fora deste total.</div>`:''}</div></article>
+    <article class="exec-card exec-span-12"><div class="exec-card-pad exec-detail-list"><div class="exec-card-title">${faturamento?'O que falta faturar':'O que falta pagar'} · ${faturamento?x.aFaturar.length:x.aPagar.length} lançamentos</div><div class="exec-card-sub">${faturamento?'Previsões cadastradas na aba NFs Emitidas.':'Compromissos da aba Custos e Despesas, por vencimento.'}</div>${faturamento?table(['Cliente','Projeto','Emissão / previsão','Vencimento','Valor bruto'],nfRows):table(['Descrição','Categoria','Projeto','Vencimento','Valor'],despRows)}</div></article>
+    <article class="exec-card exec-span-12"><div class="exec-card-pad"><details><summary class="exec-card-title">Conferir os valores mês a mês</summary>${table(['Mês',faturamento?'Faturado':'Pago',faturamento?'A faturar':'A pagar','Total'],mensalRows)}</details></div></article>
+    <article class="exec-card exec-span-12"><div class="exec-card-pad"><details><summary class="exec-card-title">${faturamento?'Notas emitidas':'Pagamentos realizados'} · ${faturamento?x.emitidas.length:x.pagas.length} lançamentos</summary>${table(faturamento?['NF','Cliente','Projeto','Emissão','Recebimento','Bruto']:['Descrição','Categoria','Projeto','Pagamento','Conta','Valor'],realizadasRows)}</details>${!faturamento&&x.pagasSemData.length?`<div class="exec-footnote">${x.pagasSemData.length} lançamento(s) com status pago, mas sem data de pagamento: fora dos totais anuais até o preenchimento da data.</div>`:''}</div></article></div>`;
+  const css=getComputedStyle(document.documentElement);
+  killChart('exec-acompanhamento');
+  mkChart('exec-acompanhamento',{type:'bar',data:{labels:x.meses.map(m=>m.label),datasets:[{label:faturamento?'Faturado':'Pago',data:x.meses.map(m=>faturamento?m.faturado:m.pago),backgroundColor:css.getPropertyValue('--green').trim(),borderRadius:4},{label:faturamento?'A faturar':'A pagar',data:x.meses.map(m=>faturamento?m.aFaturar:m.aPagar),backgroundColor:css.getPropertyValue('--petrol2').trim(),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtBRLfull(c.parsed.y)}`}}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{callback:v=>'R$ '+fmtNum(v/1000)+' mil'},grid:{color:css.getPropertyValue('--line2').trim()}}}}});
+}
 
 function showModule(id) {
   document.querySelectorAll('.module').forEach(m=>m.classList.remove('active'));
