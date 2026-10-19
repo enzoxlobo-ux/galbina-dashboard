@@ -2694,7 +2694,8 @@ function renderExecutiveOverview() {
   const h=x.horizonte;
   const fluxo30=h[3];
   const alerts=[];
-  if (x.tributosEmProjeto.length) alerts.push(`<div class="exec-alert"><strong>${x.tributosEmProjeto.length} custo(s) com indicação de tributo vinculado(s) a projeto.</strong><br>Validar a classificação para evitar duplicidade com o imposto já apurado nas NFs.</div>`);
+  // Conferência de tributos vinculados a projetos permanece no diagnóstico
+  // interno; não exibir no painel executivo (decisão de Enzo, 19/10/2026).
   if (x.nfsImpostoZerado.length) alerts.push(`<div class="exec-alert"><strong>${x.nfsImpostoZerado.length} NF(s) do ano com imposto zerado.</strong><br>Confirmar se são isentas ou se a alíquota ainda precisa ser informada.</div>`);
   if (x.custosSemProjetoCadastrado.length) alerts.push(`<div class="exec-alert"><strong>${x.custosSemProjetoCadastrado.length} custo(s) apontam para projeto não localizado no cadastro.</strong><br>Esses valores não foram atribuídos ao Top Clientes.</div>`);
   const topRows=x.topClientes.slice(0,8).map(c=>{
