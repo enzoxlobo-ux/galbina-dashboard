@@ -2304,6 +2304,20 @@ function selecionarVisaoExecutiva(view) {
   renderExecutive();
 }
 
+// Datas reais da previsão prevalecem; o projeto fornece somente o ano, nunca um mês fictício.
+function referenciaPrevisao(n, projetos=DATA.projetos) {
+  const data=parseDateBR(n.emissao)||parseDateBR(n.vencimento);
+  if(data) return {ano:data.getFullYear(),data,origem:'data'};
+  const chave=normH(n.projeto);
+  if(!chave) return {ano:null,data:null,origem:'sem referência'};
+  const candidatos=projetos.filter(p=>
+    (normH(p.nome)===chave||normH(p.id)===chave)&&normH(p.cliente)===normH(n.cliente)&&
+    (!clean(n.empresa)||!clean(p.empresa)||normH(n.empresa)===normH(p.empresa)));
+  const anos=candidatos.map(p=>parseDateBR(p.inicio)?.getFullYear()||null);
+  const ano=anos.length&&anos.every(a=>a!==null&&a===anos[0])?anos[0]:null;
+  return {ano,data:null,origem:ano?'ano do projeto':'sem referência'};
+}
+
 function calcularAcompanhamento() {
   const x = calcularExecutivo();
   const noAno = value => { const d=parseDateBR(value); return d && d.getFullYear()===x.ano; };
@@ -2311,9 +2325,10 @@ function calcularAcompanhamento() {
   const nfs = DATA.nfs.filter(n=>passaDimensoes(n)&&n.valorBruto>0&&!/cancelad/i.test(n.statusRaw||''));
   const emitidas = nfs.filter(n=>clean(n.numero)&&noAno(n.emissao));
   const previstas = nfs.filter(n=>!clean(n.numero)&&!parseDateBR(n.recebimento));
-  // Linhas sem emissão só entram no ano quando existe vencimento explícito.
-  const aFaturar = previstas.filter(n=>noAno(n.emissao)||(!parseDateBR(n.emissao)&&noAno(n.vencimento)));
-  const semAno = previstas.filter(n=>!parseDateBR(n.emissao)&&!parseDateBR(n.vencimento));
+  const aFaturar = previstas.filter(n=>referenciaPrevisao(n).ano===x.ano);
+  const semMes = aFaturar.filter(n=>!referenciaPrevisao(n).data);
+  const semAno = previstas.filter(n=>referenciaPrevisao(n).ano===null);
+  const outroAno = previstas.filter(n=>{const ano=referenciaPrevisao(n).ano;return ano!==null&&ano!==x.ano;});
   const recebidas = nfs.filter(n=>noAno(n.recebimento));
   const abertas = emitidas.filter(n=>!parseDateBR(n.recebimento));
   const despesas = DATA.despesas.filter(d=>passaDimensoes(d)&&d.valor>0&&!/cancelad/i.test(d.status||''));
@@ -2327,10 +2342,10 @@ function calcularAcompanhamento() {
   const meses = Array.from({length:12},(_,i)=>{
     const totalMes=(rows,field,value)=>soma(rows.filter(r=>{const dt=parseDateBR(r[field]);return dt&&dt.getMonth()===i;}),value);
     return {label:monthName(i+1),faturado:totalMes(emitidas,'emissao','valorBruto'),
-      aFaturar:totalMes(aFaturar.map(n=>({...n,referencia:n.emissao||n.vencimento})),'referencia','valorBruto'),
+      aFaturar:totalMes(aFaturar.map(n=>({...n,referencia:parseDateBR(n.emissao)?n.emissao:n.vencimento})),'referencia','valorBruto'),
       pago:totalMes(pagas,'dataPagamento','valor'),aPagar:totalMes(aPagar,'vencimento','valor')};
   });
-  return {...x,emitidas,aFaturar,semAno,recebidas,abertas,pagas,pagasSemData,aPagar,vencidas,semData,meses,
+  return {...x,emitidas,aFaturar,semAno,outroAno,semMes,semMesTotal:soma(semMes,'valorBruto'),recebidas,abertas,pagas,pagasSemData,aPagar,vencidas,semData,meses,
     faturado:soma(emitidas,'valorBruto'),previsto:soma(aFaturar,'valorBruto'),recebido:soma(recebidas,'valorBruto'),
     aberto:soma(abertas,'valorBruto'),pago:soma(pagas,'valor'),pendente:soma(aPagar,'valor'),
     atrasado:soma(vencidas,'valor'),semDataTotal:soma(semData,'valor')};
@@ -2347,17 +2362,17 @@ function renderExecutive() {
   const faturamento=EXEC_VIEW==='faturamento';
   const card=(label,value,sub)=>`<article class="exec-card exec-span-3"><div class="exec-card-pad"><div class="exec-card-title">${label}</div><div class="receivable-total">${fmtBRL(value)}</div><div class="exec-card-sub">${sub}</div></div></article>`;
   const table=(headers,rows)=>`<div class="exec-table-wrap"><table class="exec-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows||`<tr><td colspan="${headers.length}">Nenhum lançamento nesta seleção.</td></tr>`}</tbody></table></div>`;
-  const nfRows=x.aFaturar.map(n=>`<tr><td>${htmlSafe(n.cliente||'Sem cliente')}</td><td>${htmlSafe(n.projeto||'—')}</td><td>${htmlSafe(n.emissao||'—')}</td><td>${htmlSafe(n.vencimento||'—')}</td><td>${fmtBRL(n.valorBruto)}</td></tr>`).join('');
+  const nfRows=x.aFaturar.map(n=>`<tr><td>${htmlSafe(n.cliente||'Sem cliente')}</td><td>${htmlSafe(n.projeto||'—')}</td><td>${htmlSafe(n.emissao||(referenciaPrevisao(n).origem==='ano do projeto'?'Sem mês definido · ano do projeto':'—'))}</td><td>${htmlSafe(n.vencimento||'—')}</td><td>${fmtBRL(n.valorBruto)}</td></tr>`).join('');
   const despRows=[...x.aPagar].sort((a,b)=>(parseDateBR(a.vencimento)?.getTime()||Infinity)-(parseDateBR(b.vencimento)?.getTime()||Infinity)).map(d=>`<tr><td>${htmlSafe(d.descricao||d.fornecedor||'Sem descrição')}</td><td>${htmlSafe(d.categoria||'—')}</td><td>${htmlSafe(d.projeto||'—')}</td><td>${htmlSafe(d.vencimento||'Sem data')}</td><td>${fmtBRL(d.valor)}</td></tr>`).join('');
   const realizadasRows=faturamento
     ? [...x.emitidas].sort((a,b)=>parseDateBR(b.emissao)-parseDateBR(a.emissao)).map(n=>`<tr><td>${htmlSafe(n.numero)}</td><td>${htmlSafe(n.cliente||'—')}</td><td>${htmlSafe(n.projeto||'—')}</td><td>${htmlSafe(n.emissao)}</td><td>${htmlSafe(n.recebimento||'Em aberto')}</td><td>${fmtBRL(n.valorBruto)}</td></tr>`).join('')
     : [...x.pagas].sort((a,b)=>parseDateBR(b.dataPagamento)-parseDateBR(a.dataPagamento)).map(d=>`<tr><td>${htmlSafe(d.descricao||d.fornecedor||'—')}</td><td>${htmlSafe(d.categoria||'—')}</td><td>${htmlSafe(d.projeto||'—')}</td><td>${htmlSafe(d.dataPagamento)}</td><td>${htmlSafe(d.contaBancaria||'—')}</td><td>${fmtBRL(d.valor)}</td></tr>`).join('');
   const mensalRows=x.meses.map(m=>`<tr><td>${m.label}</td><td>${fmtBRL(faturamento?m.faturado:m.pago)}</td><td>${fmtBRL(faturamento?m.aFaturar:m.aPagar)}</td><td>${fmtBRL(faturamento?m.faturado+m.aFaturar:m.pago+m.aPagar)}</td></tr>`).join('');
   el.innerHTML=nav+`<div class="exec-hero"><div><div class="exec-eyebrow">${htmlSafe(PROFILE.cliente||'Horda')} · ${x.ano}</div><h1 class="exec-title">${faturamento?'Faturamento do ano.':'Pagamentos e compromissos.'}</h1><p class="exec-lead">${faturamento?'O que já foi emitido e o que está cadastrado para faturar.':'O que já saiu do caixa e os compromissos cadastrados para o ano.'}</p></div><div class="exec-stamp"><strong>Posição dos dados</strong>${htmlSafe(SNAPSHOT)}<br>Ano analisado: ${x.ano}</div></div><div class="exec-grid">
-    ${faturamento?card('Faturado',x.faturado,'NFs numeradas, pela emissão no ano')+card('A faturar',x.previsto,'Linhas sem número, com referência no ano')+card('Recebido no ano',x.recebido,'Pela data de recebimento; pode incluir NFs de outros anos')+card('A receber do faturado',x.aberto,'NFs emitidas no ano ainda sem recebimento'):card('Pago no ano',x.pago,'Pela data efetiva do pagamento')+card('A pagar no ano',x.pendente,'Pendências com vencimento no ano ou lançamento sem vencimento')+card('Vencido',x.atrasado,'Parte do a pagar, na data da posição')+card('Sem vencimento',x.semDataTotal,'Parte do a pagar que precisa de data')}
-    <article class="exec-card exec-span-8"><div class="exec-card-pad"><div class="exec-card-title">${faturamento?'Faturado × a faturar':'Pago × a pagar'} por mês</div><div class="exec-card-sub">${faturamento?'Emissão da NF; nas previsões sem emissão, usa o vencimento informado.':'Pagamento efetivo para pagos e vencimento para pendências.'}</div><div class="exec-chart"><canvas id="exec-acompanhamento"></canvas></div></div></article>
-    <article class="exec-card exec-span-4"><div class="exec-card-pad"><div class="exec-card-title">${faturamento?'Carteira cadastrada no ano':'Total pago + compromissos'}</div><div class="balance-total" style="color:var(--green)">${fmtBRL(faturamento?x.faturado+x.previsto:x.pago+x.pendente)}</div><div class="exec-footnote">${faturamento?'Faturado + a faturar. Recebido e a receber são leituras complementares e não devem ser somados a este total.':'Soma dos pagamentos do ano e das pendências selecionadas. Valores sem vencimento ficam fora do gráfico mensal.'}</div>${faturamento&&x.semAno.length?`<div class="exec-alert">${x.semAno.length} previsão(ões) sem emissão e sem vencimento: sem ano definido, fora deste total.</div>`:''}</div></article>
-    <article class="exec-card exec-span-12"><div class="exec-card-pad exec-detail-list"><div class="exec-card-title">${faturamento?'O que falta faturar':'O que falta pagar'} · ${faturamento?x.aFaturar.length:x.aPagar.length} lançamentos</div><div class="exec-card-sub">${faturamento?'Previsões cadastradas na aba NFs Emitidas.':'Compromissos da aba Custos e Despesas, por vencimento.'}</div>${faturamento?table(['Cliente','Projeto','Emissão / previsão','Vencimento','Valor bruto'],nfRows):table(['Descrição','Categoria','Projeto','Vencimento','Valor'],despRows)}</div></article>
+    ${faturamento?card('Faturado',x.faturado,'NFs numeradas, pela emissão no ano')+card('A faturar',x.previsto,'Sem número de NF; ano pela emissão, vencimento ou início do projeto')+card('Recebido no ano',x.recebido,'Pela data de recebimento; pode incluir NFs de outros anos')+card('A receber do faturado',x.aberto,'NFs emitidas no ano ainda sem recebimento'):card('Pago no ano',x.pago,'Pela data efetiva do pagamento')+card('A pagar no ano',x.pendente,'Pendências com vencimento no ano ou lançamento sem vencimento')+card('Vencido',x.atrasado,'Parte do a pagar, na data da posição')+card('Sem vencimento',x.semDataTotal,'Parte do a pagar que precisa de data')}
+    <article class="exec-card exec-span-8"><div class="exec-card-pad"><div class="exec-card-title">${faturamento?'Faturado × a faturar':'Pago × a pagar'} por mês</div><div class="exec-card-sub">${faturamento?'Emissão da NF ou vencimento informado. Previsões com apenas o ano do projeto ficam em “Sem mês definido”, fora do gráfico.':'Pagamento efetivo para pagos e vencimento para pendências.'}</div><div class="exec-chart"><canvas id="exec-acompanhamento"></canvas></div></div></article>
+    <article class="exec-card exec-span-4"><div class="exec-card-pad"><div class="exec-card-title">${faturamento?'Carteira cadastrada no ano':'Total pago + compromissos'}</div><div class="balance-total" style="color:var(--green)">${fmtBRL(faturamento?x.faturado+x.previsto:x.pago+x.pendente)}</div><div class="exec-footnote">${faturamento?'Faturado + a faturar. Recebido e a receber são leituras complementares e não devem ser somados a este total.':'Soma dos pagamentos do ano e das pendências selecionadas. Valores sem vencimento ficam fora do gráfico mensal.'}</div>${faturamento&&x.semMes.length?`<div class="exec-footnote">Sem mês definido: <strong>${fmtBRL(x.semMesTotal)}</strong> (${x.semMes.length} previsões). Incluído no total anual pelo início do projeto; fora do gráfico mensal e da projeção de caixa.</div>`:''}${faturamento&&x.outroAno.length?`<div class="exec-footnote">${x.outroAno.length} previsão(ões) com referência em outro ano, fora desta seleção. Confira emissão/vencimento ou início do projeto antes de alterar datas.</div>`:''}${faturamento&&x.semAno.length?`<div class="exec-alert">${x.semAno.length} previsão(ões) sem data e sem projeto com início único identificado: ano não definido, fora deste total.</div>`:''}</div></article>
+    <article class="exec-card exec-span-12"><div class="exec-card-pad exec-detail-list"><div class="exec-card-title">${faturamento?'O que falta faturar':'O que falta pagar'} · ${faturamento?x.aFaturar.length:x.aPagar.length} lançamentos</div><div class="exec-card-sub">${faturamento?'Previsões da aba NFs Emitidas, sem somar novamente a receita de Projetos. Sem emissão/vencimento, o início do projeto vinculado define apenas o ano.':'Compromissos da aba Custos e Despesas, por vencimento.'}</div>${faturamento?table(['Cliente','Projeto','Emissão / previsão','Vencimento','Valor bruto'],nfRows):table(['Descrição','Categoria','Projeto','Vencimento','Valor'],despRows)}</div></article>
     <article class="exec-card exec-span-12"><div class="exec-card-pad"><details><summary class="exec-card-title">Conferir os valores mês a mês</summary>${table(['Mês',faturamento?'Faturado':'Pago',faturamento?'A faturar':'A pagar','Total'],mensalRows)}</details></div></article>
     <article class="exec-card exec-span-12"><div class="exec-card-pad"><details><summary class="exec-card-title">${faturamento?'Notas emitidas':'Pagamentos realizados'} · ${faturamento?x.emitidas.length:x.pagas.length} lançamentos</summary>${table(faturamento?['NF','Cliente','Projeto','Emissão','Recebimento','Bruto']:['Descrição','Categoria','Projeto','Pagamento','Conta','Valor'],realizadasRows)}</details>${!faturamento&&x.pagasSemData.length?`<div class="exec-footnote">${x.pagasSemData.length} lançamento(s) com status pago, mas sem data de pagamento: fora dos totais anuais até o preenchimento da data.</div>`:''}</div></article></div>`;
   const css=getComputedStyle(document.documentElement);
