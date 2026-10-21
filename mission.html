@@ -891,6 +891,17 @@ function empresaDaConta(nome) {
   return clean(s.split('·')[0]).toUpperCase();
 }
 
+function empresaConfiguradaDaConta(nome, empresa) {
+  const informada=clean(empresa);
+  // Brasis: rótulos de responsáveis da Horda herdados no cadastro bancário.
+  // Corrige só a dimensão do dashboard; não altera fonte, valores ou outros clientes.
+  if(PROFILE.slug==='brasis'&&/^(gabriel|getulio|getúlio|rafael)$/i.test(informada)) {
+    const prefixo=empresaDaConta(nome);
+    return /^(BRASIS|EIRELLI|EIRELI)$/.test(prefixo)?prefixo:'';
+  }
+  return informada||empresaDaConta(nome);
+}
+
 function parseContasBancarias(painelRows, configRows) {
   const cfgPorConta = {};
   const hdrCfgIdx = configRows.findIndex(r => normH(r[1]||'')==='apelido');
@@ -903,7 +914,7 @@ function parseContasBancarias(painelRows, configRows) {
         tipo: clean(r[5]||''),
         saldoInicial: parseNum(r[7]||''),
         dataSaldoInicial: clean(r[8]||''),
-        empresa: clean(r[9]||'') || empresaDaConta(apelido)
+        empresa: empresaConfiguradaDaConta(apelido,r[9]||'')
       };
     }
   }
