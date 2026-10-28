@@ -1378,7 +1378,8 @@ function parseContasBancarias(painelRows, configRows) {
     for (let i=hdrIdx+1; i<painelRows.length; i++) {
       const r = painelRows[i];
       const nome = clean(r[colNome]||'');
-      if (!nome || /^(saldo total|total bancario)/i.test(normH(nome))) break;
+      // Totalização não é uma conta: Mission usa o rótulo isolado TOTAL.
+      if (!nome || /^(total$|saldo total\b|total bancario\b)/i.test(normH(nome))) break;
       const cfg = cfgPorConta[normH(nome)] || { tipo:'', saldoInicial:0, dataSaldoInicial:'', empresa:empresaDaConta(nome) };
       contas.push({
         nome,
@@ -2722,12 +2723,12 @@ function renderExecutiveOverview() {
     </div>
     <div class="exec-grid">
       <article class="exec-card balance-card exec-span-4"><div class="exec-card-pad">
-        <div class="exec-card-title">Posição bancária total</div><div class="exec-card-sub">Disponível + aplicações</div>
+        <div class="exec-card-title">Posição bancária total</div><div class="exec-card-sub">Disponível + aplicações · ${DATA.dataPosicaoBancaria?'Saldo em '+htmlSafe(DATA.dataPosicaoBancaria):'Data da posição não informada'}</div>
         <div class="balance-total">${fmtBRL(x.total)}</div>
         <div class="balance-split"><div class="balance-pill"><span>Disponível</span><strong>${fmtBRL(x.disponivel)}</strong></div><div class="balance-pill"><span>Aplicado</span><strong>${fmtBRL(x.aplicado)}</strong></div></div>
       </div></article>
       <article class="exec-card exec-span-8"><div class="exec-card-pad">
-        <div class="exec-card-title">Caixa disponível projetado</div><div class="exec-card-sub">Somente vencimentos futuros com data informada; aplicações ficam separadas.</div>
+        <div class="exec-card-title">Caixa disponível projetado</div><div class="exec-card-sub">Simulação com vencimentos futuros e o saldo da fonte${DATA.dataPosicaoBancaria?' de '+htmlSafe(DATA.dataPosicaoBancaria):''}; não confirma o saldo bancário de hoje. Aplicações ficam separadas.</div>
         <div class="horizon">${h.map((v,i)=>`<div class="horizon-item"><div class="horizon-day">${v.dias===0?'Hoje':v.dias+' dias'}</div><div class="horizon-value">${fmtBRL(v.saldo)}</div><div class="horizon-delta ${v.entradas-v.saidas>=0?'pos':'neg'}">${i===0?'posição atual':(v.entradas-v.saidas>=0?'+':'')+fmtBRL(v.entradas-v.saidas)}</div></div>`).join('')}</div>
         <div class="flow-30"><div class="flow-box in"><span>Entradas nos próximos 30 dias</span><strong>+ ${fmtBRL(fluxo30.entradas)}</strong></div><div class="flow-box out"><span>Saídas nos próximos 30 dias</span><strong>− ${fmtBRL(fluxo30.saidas)}</strong></div></div>
       </div></article>
@@ -3013,6 +3014,16 @@ async function carregarDados() {
   const fluxoTxt = await obterCSV('fluxo');
   const painelTxt = await obterCSV('painel');
   const origemContas = fluxoTxt || painelTxt;
+  // Data da posição não é a data da coleta. Ler o parâmetro explícito da fonte.
+  DATA.dataPosicaoBancaria = '';
+  for (const r of parseCSVRaw(origemContas || '')) {
+    const i=r.findIndex(c=>normH(c)==='saldo na data:');
+    if(i>=0) {
+      const d=r.slice(i+1).map(parseDateBR).find(Boolean);
+      if(d) DATA.dataPosicaoBancaria=fmtDate(d);
+      break;
+    }
+  }
   DATA.contas = (origemContas && cfgTxt) ? parseContasBancarias(parseCSVRaw(origemContas), parseCSVRaw(cfgTxt)) : (usouFallback=true, [...FALLBACK.contas]);
   if (!DATA.contas.length) DATA.contas = [...FALLBACK.contas];
 
