@@ -9,7 +9,7 @@ Criar um dashboard comercial demonstrativo no mesmo modelo executivo dos dashboa
 - Fonte exclusiva: planilha DEMO, com dados explicitamente fictícios.
 - Saída local: `entregas/demo/Dashboard_Demo.html`.
 - Saída pública: `dashboard/demo.html`, no mesmo GitHub Pages dos demais dashboards.
-- Acesso: código visual distinto e estável, com a mesma limitação cosmética dos dashboards atuais.
+- Acesso: abertura direta pelo link público, sem tela ou código de entrada.
 - Atualização: manual nesta fase; o DEMO não entra na automação oficial das 08h e 16h.
 - Modelo visual e motor: reutilizar `dashboard/index.html` e `ferramentas/gerar_snapshot.py`, sem criar um segundo motor.
 
@@ -35,7 +35,7 @@ A despesa sem Data de Pagamento não deve entrar como saída realizada nem na co
 
 ## Publicação e segurança
 
-O GitHub Pages é público. O código de entrada é apenas uma barreira visual e não deve ser apresentado como autenticação segura. O HTML não deve conter links para planilhas reais, códigos de outros clientes, credenciais ou arquivos de auditoria.
+O GitHub Pages é público e o DEMO abre diretamente, sem autenticação. O HTML não deve conter links para planilhas reais, códigos de clientes, credenciais ou arquivos de auditoria.
 
 ## Validação
 

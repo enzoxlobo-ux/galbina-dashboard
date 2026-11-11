@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="gaibina-entrada">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
@@ -457,81 +457,6 @@ body {
 </style>
 </head>
 <body>
-<!-- Molde interno: usar somente pelo gerador; não abrir como página final. -->
-<style>
-html.gaibina-entrada body { overflow:hidden; }
-html.gaibina-entrada body > :not(#entrada-visual):not(script):not(style):not(noscript) { visibility:hidden!important; }
-#entrada-visual { position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:var(--bg);padding:24px;overflow:auto; }
-#entrada-visual[hidden] { display:none; }
-.entrada-cartao { width:min(100%,420px);padding:36px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-top:4px solid var(--sand);border-radius:12px;box-shadow:var(--shadow-md); }
-.entrada-marca { color:var(--green);font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase; }
-.entrada-cartao h1 { font-size:28px;margin:18px 0 10px;line-height:1.2; }
-.entrada-cartao p { color:var(--ink-soft);line-height:1.5;margin-bottom:22px; }
-.entrada-cartao label { display:block;font-size:14px;font-weight:600;margin-bottom:8px; }
-.entrada-cartao input { width:100%;padding:13px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit; }
-.entrada-cartao button { width:100%;margin:16px 0;padding:13px;border:0;border-radius:6px;background:var(--brand-solid);color:white;font:inherit;font-weight:600;cursor:pointer; }
-.entrada-cartao :focus-visible { outline:3px solid var(--sand);outline-offset:3px; }
-.entrada-aviso { display:block;font-size:12px;line-height:1.5;color:var(--muted); }
-#entrada-erro { min-height:22px;color:var(--red);margin:10px 0 0;font-size:14px; }
-#entrada-sair { position:fixed;right:16px;bottom:16px;z-index:9999;padding:9px 14px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer;box-shadow:var(--shadow-sm); }
-@media(max-width:480px) { .entrada-cartao { padding:26px; } }
-@media print { #entrada-sair {display:none;} html.gaibina-entrada body>*:not(#entrada-visual){display:none!important;} }
-</style>
-<section id="entrada-visual" aria-labelledby="entrada-titulo">
-  <form class="entrada-cartao" id="entrada-form">
-    <div class="entrada-marca">Gaibina · Painel financeiro</div>
-    <h1 id="entrada-titulo">Empresa Demonstração</h1>
-    <p>Informe o código fornecido pela Gaibina para abrir o dashboard.</p>
-    <label for="entrada-codigo">Código de entrada</label>
-    <input id="entrada-codigo" type="password" autocomplete="off" required spellcheck="false" aria-describedby="entrada-erro entrada-aviso">
-    <div id="entrada-erro" role="status" aria-live="polite"></div>
-    <button type="submit">Entrar</button>
-    <small class="entrada-aviso" id="entrada-aviso"></small>
-  </form>
-</section>
-<button id="entrada-sair" type="button" hidden>Sair</button>
-<noscript>Ative o JavaScript para usar o dashboard. O código de entrada é apenas um controle visual.</noscript>
-<script>
-/* Não é autenticação: o HTML e seus dados permanecem acessíveis publicamente. */
-(() => {
-  const esperado = "56c6c77f10499a0820519c72af77b8894fa6c75de98bebdfeeb28f384cbf4c67";
-  const chave = "gaibina-entrada-v1-demo";
-  const tela=document.getElementById('entrada-visual');
-  const sair=document.getElementById('entrada-sair');
-  const campo=document.getElementById('entrada-codigo');
-  function liberar() {
-    document.documentElement.classList.remove('gaibina-entrada');
-    tela.hidden=true; sair.hidden=false; campo.value='';
-    document.querySelector('.header-title')?.setAttribute('tabindex','-1');
-    document.querySelector('.header-title')?.focus();
-    window.dispatchEvent(new Event('resize'));
-  }
-  function bloquear() {
-    document.documentElement.classList.add('gaibina-entrada');
-    tela.hidden=false; sair.hidden=true;
-    document.getElementById('entrada-erro').textContent='';
-    campo.value=''; campo.focus();
-  }
-  try { if(sessionStorage.getItem(chave)===esperado) liberar(); else bloquear(); } catch(_) { bloquear(); }
-  document.getElementById('entrada-form').addEventListener('submit',async e=>{
-    e.preventDefault();
-    try {
-      const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(campo.value.trim()));
-      const hash=Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');
-      if(hash!==esperado) {
-        document.getElementById('entrada-erro').textContent='Código não reconhecido. Confira e tente novamente.';
-        campo.select(); return;
-      }
-      try {sessionStorage.setItem(chave,esperado);}catch(_){}
-      liberar();
-    } catch(_) {
-      document.getElementById('entrada-erro').textContent='Abra o link HTTPS do dashboard em um navegador atualizado.';
-    }
-  });
-  sair.addEventListener('click',()=>{try{sessionStorage.removeItem(chave);}catch(_){} bloquear();});
-})();
-</script>
-
 
 <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
 
